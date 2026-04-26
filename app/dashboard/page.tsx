@@ -1,6 +1,10 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+
 export default function Dashboard() {
+  const router = useRouter()
+  
   const processes = [
     { name: 'Plan to Perform', code: 'P2P', color: '#0F4C81', available: true },
     { name: 'Record to Report', code: 'R2R', color: '#1a6b5c', available: true },
@@ -11,11 +15,16 @@ export default function Dashboard() {
     { name: 'Transact to Record', code: 'T2R', color: '#1a6b3c', available: false },
   ]
 
+  const navItems = ['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings']
+
+  const handleNav = (item: string) => {
+    if (item === 'Process Explorer') router.push('/process-explorer')
+  }
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       {/* Sidebar */}
       <div style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px' }}>
-        {/* Logo */}
         <div style={{ marginBottom: '32px', paddingBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
             <div style={{ width: '36px', height: '36px', background: '#4fa3e0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}>FPI</div>
@@ -24,8 +33,8 @@ export default function Dashboard() {
           <p style={{ fontSize: '11px', color: '#a0c4e8', marginLeft: '46px' }}>Intelligence Platform</p>
         </div>
         <nav>
-          {['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings'].map(item => (
-            <div key={item} style={{ padding: '10px 12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', background: item === 'Dashboard' ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
+          {navItems.map(item => (
+            <div key={item} onClick={() => handleNav(item)} style={{ padding: '10px 12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', background: item === 'Dashboard' ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
               {item}
             </div>
           ))}
@@ -34,13 +43,11 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div style={{ flex: 1, background: '#f4f6f9', padding: '32px' }}>
-        {/* Header */}
         <div style={{ marginBottom: '32px' }}>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a1a2e' }}>Welcome back, Ravi</h1>
           <p style={{ color: '#666', marginTop: '4px' }}>Finance Process Intelligence Platform</p>
         </div>
 
-        {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
           {[
             { label: 'Assessments Completed', value: '0' },
@@ -54,11 +61,10 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Process Grid */}
         <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '16px' }}>Finance Process Taxonomy</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
           {processes.map(p => (
-            <div key={p.code} style={{
+            <div key={p.code} onClick={() => p.available && router.push('/process-explorer')} style={{
               background: p.available ? 'white' : '#f0f0f0',
               borderRadius: '8px',
               padding: '20px',
@@ -66,12 +72,11 @@ export default function Dashboard() {
               borderLeft: `4px solid ${p.available ? p.color : '#ccc'}`,
               cursor: p.available ? 'pointer' : 'default',
               opacity: p.available ? 1 : 0.6,
-              position: 'relative'
             }}>
               <p style={{ fontSize: '11px', fontWeight: 'bold', color: p.available ? p.color : '#aaa', marginBottom: '6px' }}>{p.code}</p>
               <p style={{ fontSize: '15px', fontWeight: '600', color: p.available ? '#1a1a2e' : '#999' }}>{p.name}</p>
               <p style={{ fontSize: '12px', marginTop: '8px', color: p.available ? '#999' : '#bbb' }}>
-                {p.available ? 'Not started' : '🔒 Coming Soon'}
+                {p.available ? 'Click to explore →' : '🔒 Coming Soon'}
               </p>
             </div>
           ))}
