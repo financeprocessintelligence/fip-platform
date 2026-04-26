@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 
 const steps = [
@@ -120,7 +121,10 @@ type ToolAnswers = Record<string, { selected: string[]; tools: string }>
 
 export default function AssessmentPage() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(0)
+  const searchParams = useSearchParams()
+const codeParam = searchParams.get('code')
+const initialStep = codeParam ? Math.max(0, steps.findIndex(s => s.code === codeParam)) : 0
+const [currentStep, setCurrentStep] = useState(initialStep)
   const [answers, setAnswers] = useState<Answers>({})
   const [toolAnswers, setToolAnswers] = useState<ToolAnswers>({})
 

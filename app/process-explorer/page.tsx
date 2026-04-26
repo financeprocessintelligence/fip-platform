@@ -132,10 +132,10 @@ export default function ProcessExplorer() {
                           <span style={{ color: '#4fa3e0', fontWeight: '600', marginRight: '4px' }}>{col.code}.{i + 1}</span>
                           {activity}
                         </span>
-                        <button style={{ padding: '2px 7px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', marginLeft: '4px', flexShrink: 0 }}>Assess</button>
+                        <button onClick={() => router.push(`/assessment?code=${col.code.split('.')[0]}.${col.code.split('.')[1]}`)} style={{ padding: '2px 7px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', marginLeft: '4px', flexShrink: 0 }}>Assess</button>
                       </div>
                     ))}
-                    <button style={{ width: '100%', marginTop: '10px', padding: '6px', background: '#0F2744', color: 'white', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                    <button onClick={() => router.push(`/assessment?code=${col.code.split('.')[0]}.${col.code.split('.')[1]}`)} style={{ width: '100%', marginTop: '10px', padding: '6px', background: '#0F2744', color: 'white', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
                       Assess All →
                     </button>
                   </div>
