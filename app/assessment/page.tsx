@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 
@@ -119,7 +119,7 @@ const steps = [
 type Answers = Record<string, { selected: string[]; other: string; painPoint: string }>
 type ToolAnswers = Record<string, { selected: string[]; tools: string }>
 
-export default function AssessmentPage() {
+function AssessmentPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 const codeParam = searchParams.get('code')
@@ -264,5 +264,11 @@ const [currentStep, setCurrentStep] = useState(initialStep)
         </div>
       </div>
     </div>
+  )
+}export default function AssessmentPageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AssessmentPage />
+    </Suspense>
   )
 }
