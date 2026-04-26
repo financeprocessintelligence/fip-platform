@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
-
+import { supabase } from '../../lib/supabase'
 const steps = [
   {
     code: '1.1',
@@ -121,6 +121,50 @@ type ToolAnswers = Record<string, { selected: string[]; tools: string }>
 
 function AssessmentPage() {
   const router = useRouter()
+  const [saving, setSaving] = useState(false)
+
+  const saveToSupabase = async (complete: boolean) => {
+    setSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setSaving(false); return }
+
+    const rows = []
+    for (const s of steps) {
+      for (const l3 of s.l3s) {
+        const ans = answers[l3.code]
+        const toolAns = toolAnswers[s.code]
+        // Score: map selected options to maturity scores (first option = 5, last = 1)
+        let score = 0
+        if (ans?.selected?.length > 0) {
+          const maxScore = Math.max(...ans.selected.filter(o => o !== 'Other').map(o => {
+            const idx = l3.options.indexOf(o)
+            if (idx === -1) return 1
+            return Math.max(1, 5 - idx)
+          }))
+          score = maxScore
+        }
+        rows.push({
+          user_id: user.id,
+          process_name: 'Plan to Perform',
+          step_code: s.code,
+          l3_code: l3.code,
+          selected_options: ans?.selected || [],
+          other_text: ans?.other || '',
+          pain_point: ans?.painPoint || '',
+          tool_options: toolAns?.selected || [],
+          tool_names: toolAns?.tools || '',
+          score: score || null,
+        })
+      }
+    }
+
+    for (const row of rows) {
+      await supabase.from('assessments').upsert(row, { onConflict: 'user_id,l3_code' })
+    }
+
+    setSaving(false)
+    if (complete) router.push('/results')
+  }
   const searchParams = useSearchParams()
 const codeParam = searchParams.get('code')
 const initialStep = codeParam ? Math.max(0, steps.findIndex(s => s.code === codeParam)) : 0
@@ -248,16 +292,16 @@ const [currentStep, setCurrentStep] = useState(initialStep)
           </button>
           <div style={{ fontSize: '13px', color: '#666' }}>{totalAnswered} of {step.l3s.length} answered</div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button style={{ padding: '10px 20px', background: 'white', color: '#666', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
-              Save Progress
+            <button onClick={() => saveToSupabase(false)} disabled={saving} style={{ padding: '10px 20px', background: 'white', color: '#666', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
+              {saving ? 'Saving...' : 'Save Progress'}
             </button>
             {currentStep < steps.length - 1 ? (
               <button onClick={() => setCurrentStep(currentStep + 1)} style={{ padding: '10px 24px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
                 Next: {steps[currentStep + 1].name} →
               </button>
             ) : (
-              <button style={{ padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
-                Complete Assessment →
+              <button onClick={() => saveToSupabase(true)} disabled={saving} style={{ padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                {saving ? 'Saving...' : 'Complete Assessment →'}
               </button>
             )}
           </div>

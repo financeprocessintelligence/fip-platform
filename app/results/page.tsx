@@ -2,28 +2,21 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../../lib/supabase'
 
-const results = [
-  { code: '1.1', name: 'Develop Top-down Plan', score: 2.1, level: 'Repeatable', narrative: 'Strategic analysis is performed through internal workshops but lacks a consistent methodology. Top-down targets are set by the Board but the translation to planning drivers is informal and relies on individual knowledge rather than a structured framework.' },
-  { code: '1.2', name: 'Cascade the Plan', score: 1.8, level: 'Initial', narrative: 'Plan cascading is largely manual and inconsistent across business units. Planning assumptions vary by team and there is no central assumption library. Accountability for plan delivery is informally agreed rather than formally assigned.' },
-  { code: '1.3', name: 'Develop Bottom-up Budget', score: 3.1, level: 'Defined', narrative: 'The bottom-up budgeting process is well structured with defined templates and a formal sign-off process. Revenue and cost planning follows a documented methodology, though workforce planning integration with HR systems remains partial.' },
-  { code: '1.4', name: 'Refresh Rolling Forecasts', score: 3.4, level: 'Defined', narrative: 'Rolling forecasts are refreshed monthly with driver-based revenue modelling and structured Opex refresh cycles. Scenario testing is performed using predefined templates. The process is supported by a planning platform though some Excel dependency remains.' },
-  { code: '1.5', name: 'Report Results', score: 2.7, level: 'Repeatable', narrative: 'Management reporting follows a monthly cadence with standardised variance analytics. Some BU-specific report customisation exists, creating inconsistency. Reporting is largely Finance-led with limited self-service capability for business partners.' },
-  { code: '1.6', name: 'Take Corrective Actions', score: 1.9, level: 'Initial', narrative: 'Performance gaps are identified in monthly reviews but root cause analysis is informal. Corrective actions are verbally agreed rather than formally documented with named owners and deadlines, resulting in low closure rates.' },
-  { code: '1.7', name: 'Govern the Process', score: 1.5, level: 'Initial', narrative: 'FP&A governance is largely informal with no centralised policy repository or planning calendar. Data quality is managed reactively and there is no formal EPM system governance framework. AI governance is unexplored.' },
+const stepDefinitions = [
+  { code: '1.1', name: 'Develop Top-down Plan' },
+  { code: '1.2', name: 'Cascade the Plan' },
+  { code: '1.3', name: 'Develop Bottom-up Budget' },
+  { code: '1.4', name: 'Refresh Rolling Forecasts' },
+  { code: '1.5', name: 'Report Results' },
+  { code: '1.6', name: 'Take Corrective Actions' },
+  { code: '1.7', name: 'Govern the Process' },
 ]
 
-const overallScore = (results.reduce((sum, r) => sum + r.score, 0) / results.length).toFixed(1)
-const strongest = results.reduce((a, b) => a.score > b.score ? a : b)
-const weakest = results.reduce((a, b) => a.score < b.score ? a : b)
-
-const maturityColumns = [
-  { key: 'Initial', label: 'INITIAL', range: '1–1.9', desc: 'Manual, reactive, no documentation', color: '#ef4444', bg: '#fef2f2' },
-  { key: 'Repeatable', label: 'REPEATABLE', range: '2–2.9', desc: 'Some standardisation, roles emerging', color: '#f97316', bg: '#fff7ed' },
-  { key: 'Defined', label: 'DEFINED', range: '3–3.9', desc: 'Documented, KPIs in place', color: '#eab308', bg: '#fefce8' },
-  { key: 'Managed', label: 'MANAGED', range: '4–4.9', desc: 'Data-driven, cross-functional', color: '#22c55e', bg: '#f0fdf4' },
-  { key: 'Optimised', label: 'OPTIMISED', range: '5.0', desc: 'Predictive, AI-assisted', color: '#3b82f6', bg: '#eff6ff' },
-]
+const benchmarkAverages: Record<string, number> = {
+  '1.1': 2.4, '1.2': 2.2, '1.3': 2.8, '1.4': 2.5, '1.5': 2.6, '1.6': 2.3, '1.7': 2.1, 'overall': 2.7
+}
 
 const findings = [
   { type: 'strength', text: 'Refresh Rolling Forecasts shows the highest maturity at Defined level — your forecasting cadence and variance analytics are well established.' },
@@ -35,33 +28,68 @@ const findings = [
 ]
 
 const recommendations = [
-  { priority: '1', action: 'Implement a Formal Corrective Action Tracking Framework', detail: 'Establish a structured process for documenting, assigning and tracking corrective actions following monthly performance reviews. Introduce a named owner model with defined deadlines.', impact: 'High', effort: 'Low', timeline: '1 Quarter', owner: 'CFO / Finance Director', l2: '1.6' },
-  { priority: '2', action: 'Adopt a Structured Strategic Analysis Framework', detail: 'Introduce a consistent methodology (e.g. PESTLE, SWOT) to replace informal internal workshops. Formalise the link between strategic analysis outputs and top-down target setting.', impact: 'High', effort: 'Medium', timeline: '2 Quarters', owner: 'Finance Director', l2: '1.1' },
-  { priority: '3', action: 'Establish a Central Planning Assumptions Library', detail: 'Create a centralised assumption library accessible to all BUs. Define Finance ownership and a formal review and approval process at the start of each planning cycle.', impact: 'High', effort: 'Medium', timeline: '2 Quarters', owner: 'Head of FP&A', l2: '1.2' },
-  { priority: '4', action: 'Define FP&A Governance Framework', detail: 'Establish a formal FP&A governance framework including planning calendar, policy repository, data standards and internal controls. Assign a governance owner within the Finance team.', impact: 'Medium', effort: 'Medium', timeline: '2 Quarters', owner: 'CFO', l2: '1.7' },
-  { priority: '5', action: 'Pilot AI-Assisted Variance Analytics', detail: 'Use your existing BI platform to pilot AI-powered variance detection and narrative generation. Start with one business unit before rolling out across the organisation.', impact: 'Medium', effort: 'Low', timeline: '1 Quarter', owner: 'Head of FP&A', l2: '1.5' },
+  { priority: '1', action: 'Implement a Formal Corrective Action Tracking Framework', detail: 'Establish a structured process for documenting, assigning and tracking corrective actions following monthly performance reviews.', impact: 'High', effort: 'Low', timeline: '1 Quarter', owner: 'CFO / Finance Director', l2: '1.6' },
+  { priority: '2', action: 'Adopt a Structured Strategic Analysis Framework', detail: 'Introduce a consistent methodology (e.g. PESTLE, SWOT) to replace informal internal workshops.', impact: 'High', effort: 'Medium', timeline: '2 Quarters', owner: 'Finance Director', l2: '1.1' },
+  { priority: '3', action: 'Establish a Central Planning Assumptions Library', detail: 'Create a centralised assumption library accessible to all BUs with Finance ownership.', impact: 'High', effort: 'Medium', timeline: '2 Quarters', owner: 'Head of FP&A', l2: '1.2' },
+  { priority: '4', action: 'Define FP&A Governance Framework', detail: 'Establish a formal FP&A governance framework including planning calendar, policy repository and internal controls.', impact: 'Medium', effort: 'Medium', timeline: '2 Quarters', owner: 'CFO', l2: '1.7' },
+  { priority: '5', action: 'Pilot AI-Assisted Variance Analytics', detail: 'Use your existing BI platform to pilot AI-powered variance detection and narrative generation.', impact: 'Medium', effort: 'Low', timeline: '1 Quarter', owner: 'Head of FP&A', l2: '1.5' },
 ]
 
 const aiInsights = {
-  strengths: 'Your organisation demonstrates notably strong capability in rolling forecast management, achieving a maturity score of 3.4 — placing it in the Defined tier. The monthly driver-based refresh cycle and platform integration put you ahead of approximately 60% of peers at a similar scale. The budgeting process (1.3) also shows positive maturity at the Defined level (3.1), with structured templates, defined planning drivers and a semi-automated consolidation process.',
+  strengths: 'Your organisation demonstrates notably strong capability in rolling forecast management. The monthly driver-based refresh cycle and platform integration put you ahead of approximately 60% of peers at a similar scale. The budgeting process also shows positive maturity at the Defined level, with structured templates and defined planning drivers.',
   strengthQuote: 'Your forecasting capability is your strongest asset — the monthly driver-based refresh cycle and platform integration put you ahead of approximately 60% of Financial Services peers at a similar scale.',
-  gaps: 'The most significant maturity gap is in corrective action management (1.6), scoring 1.9 — firmly in the Initial tier. While performance variances are identified and discussed in monthly reviews, root cause analysis is informal and corrective actions are rarely documented with named owners or tracked to resolution. Strategic planning processes (1.1 and 1.2) also show meaningful opportunity for improvement, scoring 2.1 and 1.8 respectively.',
+  gaps: 'The most significant maturity gap is in corrective action management — firmly in the Initial tier. While performance variances are identified and discussed in monthly reviews, root cause analysis is informal and corrective actions are rarely documented with named owners or tracked to resolution.',
   gapQuote: 'The absence of a structured corrective action framework means performance gaps identified through strong reporting are not being systematically resolved — this is the highest-priority improvement opportunity.',
-  opportunity: 'With rolling forecasts at Defined maturity and budgeting well structured, your organisation has a strong foundation to accelerate towards Managed maturity. The priority actions are: formalising corrective action tracking, establishing planning governance, and piloting AI-assisted analytics on your existing BI platform.',
+  opportunity: 'With rolling forecasts at Defined maturity and budgeting well structured, your organisation has a strong foundation to accelerate towards Managed maturity. The priority actions are: formalising corrective action tracking, establishing planning governance, and piloting AI-assisted analytics.',
 }
 
-const benchmarks = [
-  { label: 'Your overall score', score: parseFloat((results.reduce((sum, r) => sum + r.score, 0) / results.length).toFixed(1)), avg: 2.7 },
-  { label: '1.1 Develop Top-down Plan', score: 2.1, avg: 2.4 },
-  { label: '1.2 Cascade the Plan', score: 1.8, avg: 2.2 },
-  { label: '1.3 Develop Bottom-up Budget', score: 3.1, avg: 2.8 },
-  { label: '1.4 Refresh Rolling Forecasts', score: 3.4, avg: 2.5 },
-  { label: '1.5 Report Results', score: 2.7, avg: 2.6 },
-  { label: '1.6 Take Corrective Actions', score: 1.9, avg: 2.3 },
-  { label: '1.7 Govern the Process', score: 1.5, avg: 2.1 },
+const maturityColumns = [
+  { key: 'Initial', label: 'INITIAL', range: '1–1.9', desc: 'Manual, reactive, no documentation', color: '#ef4444', bg: '#fef2f2' },
+  { key: 'Repeatable', label: 'REPEATABLE', range: '2–2.9', desc: 'Some standardisation, roles emerging', color: '#f97316', bg: '#fff7ed' },
+  { key: 'Defined', label: 'DEFINED', range: '3–3.9', desc: 'Documented, KPIs in place', color: '#eab308', bg: '#fefce8' },
+  { key: 'Managed', label: 'MANAGED', range: '4–4.9', desc: 'Data-driven, cross-functional', color: '#22c55e', bg: '#f0fdf4' },
+  { key: 'Optimised', label: 'OPTIMISED', range: '5.0', desc: 'Predictive, AI-assisted', color: '#3b82f6', bg: '#eff6ff' },
 ]
 
-function RadarChart({ hoveredCode, onHover }: { hoveredCode: string | null, onHover: (code: string | null) => void }) {
+function getLevel(score: number): string {
+  if (score < 2) return 'Initial'
+  if (score < 3) return 'Repeatable'
+  if (score < 4) return 'Defined'
+  if (score < 5) return 'Managed'
+  return 'Optimised'
+}
+
+function getLevelColor(level: string): string {
+  const colors: Record<string, string> = { 'Initial': '#ef4444', 'Repeatable': '#f97316', 'Defined': '#eab308', 'Managed': '#22c55e', 'Optimised': '#3b82f6' }
+  return colors[level] || '#666'
+}
+
+function getScorePosition(score: number): number {
+  if (score < 2) return 0
+  if (score < 3) return 1
+  if (score < 4) return 2
+  if (score < 5) return 3
+  return 4
+}
+
+type AssessmentRow = {
+  step_code: string
+  l3_code: string
+  score: number | null
+  selected_options: string[]
+  pain_point: string
+}
+
+type L2Result = {
+  code: string
+  name: string
+  score: number
+  level: string
+  narrative: string
+  l3s: { code: string; score: number; level: string }[]
+}
+
+function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], hoveredCode: string | null, onHover: (code: string | null) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -152,7 +180,7 @@ function RadarChart({ hoveredCode, onHover }: { hoveredCode: string | null, onHo
       ctx.font = hoveredCode === results[i].code ? 'bold 11px sans-serif' : '11px sans-serif'
       ctx.fillText(results[i].code, x, y + 4)
     }
-  }, [hoveredCode])
+  }, [results, hoveredCode])
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
@@ -178,7 +206,8 @@ function RadarChart({ hoveredCode, onHover }: { hoveredCode: string | null, onHo
   }
 
   return (
-    <canvas ref={canvasRef} width={420} height={380} style={{ display: 'block', margin: '0 auto', cursor: hoveredCode ? 'pointer' : 'default' }}
+    <canvas ref={canvasRef} width={420} height={380}
+      style={{ display: 'block', margin: '0 auto', cursor: hoveredCode ? 'pointer' : 'default' }}
       onMouseMove={handleMouseMove} onMouseLeave={() => onHover(null)} />
   )
 }
@@ -189,21 +218,74 @@ export default function ResultsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'spider'>('grid')
   const [hoveredCode, setHoveredCode] = useState<string | null>(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+  const [l2Results, setL2Results] = useState<L2Result[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const getLevelColor = (level: string) => {
-    const colors: Record<string, string> = { 'Initial': '#ef4444', 'Repeatable': '#f97316', 'Defined': '#eab308', 'Managed': '#22c55e', 'Optimised': '#3b82f6' }
-    return colors[level] || '#666'
-  }
+  useEffect(() => {
+    const fetchResults = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/'); return }
 
-  const getScorePosition = (score: number) => {
-    if (score < 2) return 0
-    if (score < 3) return 1
-    if (score < 4) return 2
-    if (score < 5) return 3
-    return 4
-  }
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('process_name', 'Plan to Perform')
 
-  const hoveredResult = results.find(r => r.code === hoveredCode)
+      if (error || !data) { setLoading(false); return }
+
+      const rows = data as AssessmentRow[]
+
+      const results: L2Result[] = stepDefinitions.map(step => {
+        const stepRows = rows.filter(r => r.step_code === step.code)
+        const scoredRows = stepRows.filter(r => r.score !== null)
+        const l2Score = scoredRows.length > 0
+          ? parseFloat((scoredRows.reduce((sum, r) => sum + (r.score || 0), 0) / scoredRows.length).toFixed(1))
+          : 0
+
+        const l3s = stepRows.map(r => ({
+          code: r.l3_code,
+          score: r.score || 0,
+          level: getLevel(r.score || 0)
+        }))
+
+        return {
+          code: step.code,
+          name: step.name,
+          score: l2Score,
+          level: getLevel(l2Score),
+          narrative: `${step.name} has been assessed based on your responses. Score: ${l2Score}/5.0 — ${getLevel(l2Score)} maturity.`,
+          l3s
+        }
+      })
+
+      setL2Results(results)
+      setLoading(false)
+    }
+
+    fetchResults()
+  }, [router])
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '24px', marginBottom: '12px' }}>⏳</div>
+        <div style={{ fontSize: '16px', color: '#666' }}>Loading your results...</div>
+      </div>
+    </div>
+  )
+
+  const overallScore = l2Results.length > 0
+    ? parseFloat((l2Results.filter(r => r.score > 0).reduce((sum, r) => sum + r.score, 0) / l2Results.filter(r => r.score > 0).length).toFixed(1))
+    : 0
+  const strongest = l2Results.length > 0 ? l2Results.reduce((a, b) => a.score > b.score ? a : b) : null
+  const weakest = l2Results.length > 0 ? l2Results.reduce((a, b) => a.score < b.score ? a : b) : null
+  const hoveredResult = l2Results.find(r => r.code === hoveredCode)
+
+  const benchmarks = [
+    { label: 'Your overall score', score: overallScore, avg: benchmarkAverages['overall'] },
+    ...l2Results.map(r => ({ label: `${r.code} ${r.name}`, score: r.score, avg: benchmarkAverages[r.code] || 2.5 }))
+  ]
 
   return (
     <div style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
@@ -223,11 +305,11 @@ export default function ResultsPage() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginTop: '28px' }}>
           {[
-            { label: 'OVERALL MATURITY SCORE', value: overallScore, sub: 'out of 5.0', highlight: '#1d9e75' },
-            { label: 'STRONGEST L2 PROCESS', value: strongest.score.toFixed(1), sub: strongest.name, highlight: '#eab308' },
-            { label: 'WEAKEST L2 PROCESS', value: weakest.score.toFixed(1), sub: weakest.name, highlight: '#ef4444' },
-            { label: 'L2 PROCESSES ASSESSED', value: `${results.length}`, sub: `of ${results.length} completed`, highlight: '#4fa3e0' },
-            { label: 'L3 ACTIVITIES COVERED', value: '48', sub: '100% coverage', highlight: '#4fa3e0' },
+            { label: 'OVERALL MATURITY SCORE', value: overallScore.toString(), sub: 'out of 5.0', highlight: '#1d9e75' },
+            { label: 'STRONGEST L2 PROCESS', value: strongest?.score.toFixed(1) || '-', sub: strongest?.name || '-', highlight: '#eab308' },
+            { label: 'WEAKEST L2 PROCESS', value: weakest?.score.toFixed(1) || '-', sub: weakest?.name || '-', highlight: '#ef4444' },
+            { label: 'L2 PROCESSES ASSESSED', value: `${l2Results.filter(r => r.score > 0).length}`, sub: `of ${l2Results.length} completed`, highlight: '#4fa3e0' },
+            { label: 'L3 ACTIVITIES COVERED', value: `${l2Results.reduce((sum, r) => sum + r.l3s.filter(l => l.score > 0).length, 0)}`, sub: 'activities assessed', highlight: '#4fa3e0' },
           ].map(s => (
             <div key={s.label} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '8px', padding: '16px' }}>
               <div style={{ fontSize: '10px', color: '#a0c4e8', letterSpacing: '0.06em', marginBottom: '8px' }}>{s.label}</div>
@@ -250,14 +332,11 @@ export default function ResultsPage() {
       {/* Content */}
       <div style={{ padding: '32px 40px' }}>
 
-        {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e' }}>
-                  {viewMode === 'grid' ? 'Capability Maturity Grid — Plan to Perform' : 'Maturity Spider Chart — Plan to Perform'}
-                </h2>
+                <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e' }}>{viewMode === 'grid' ? 'Capability Maturity Grid — Plan to Perform' : 'Maturity Spider Chart — Plan to Perform'}</h2>
                 <p style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>Hover over each dot to see the detailed maturity narrative</p>
               </div>
               <div style={{ display: 'flex', background: '#e0e4ea', borderRadius: '8px', padding: '4px', gap: '4px' }}>
@@ -266,7 +345,6 @@ export default function ResultsPage() {
               </div>
             </div>
 
-            {/* Grid View */}
             {viewMode === 'grid' && (
               <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px', position: 'relative' }}>
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
@@ -292,16 +370,16 @@ export default function ResultsPage() {
                     <div key={col.key} style={{ padding: '6px 12px', fontSize: '11px', color: '#666', textAlign: 'center' }}>{col.desc}</div>
                   ))}
                 </div>
-                {results.map((r, idx) => (
+                {l2Results.map((r, idx) => (
                   <div key={r.code} style={{ display: 'grid', gridTemplateColumns: '200px repeat(5, 1fr)', background: idx % 2 === 0 ? '#fafafa' : 'white', borderRadius: '4px', marginBottom: '2px' }}>
                     <div style={{ padding: '14px 12px' }}>
                       <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F4C81' }}>L2 {r.code}</div>
                       <div style={{ fontSize: '13px', color: '#1a1a2e', fontWeight: '500' }}>{r.name}</div>
-                      <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>Score: {r.score}</div>
+                      <div style={{ fontSize: '11px', color: r.score > 0 ? '#999' : '#ef4444', marginTop: '2px' }}>{r.score > 0 ? `Score: ${r.score}` : 'Not assessed'}</div>
                     </div>
                     {maturityColumns.map((col, colIdx) => (
                       <div key={col.key} style={{ padding: '14px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {getScorePosition(r.score) === colIdx && (
+                        {r.score > 0 && getScorePosition(r.score) === colIdx && (
                           <div
                             onMouseEnter={e => { setHoveredCode(r.code); setTooltipPos({ x: e.clientX, y: e.clientY }) }}
                             onMouseMove={e => setTooltipPos({ x: e.clientX, y: e.clientY })}
@@ -329,10 +407,9 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Spider View */}
             {viewMode === 'spider' && (
               <div style={{ background: 'white', borderRadius: '12px', padding: '32px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px', position: 'relative' }}>
-                <RadarChart hoveredCode={hoveredCode} onHover={setHoveredCode} />
+                <RadarChart results={l2Results} hoveredCode={hoveredCode} onHover={setHoveredCode} />
                 {hoveredCode && hoveredResult && (
                   <div style={{ position: 'absolute', top: '50%', right: '24px', transform: 'translateY(-50%)', background: '#0F2744', color: 'white', padding: '16px', borderRadius: '8px', width: '260px', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -347,7 +424,7 @@ export default function ResultsPage() {
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
-                  {results.map(r => (
+                  {l2Results.map(r => (
                     <div key={r.code} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: getLevelColor(r.level) }} />
                       <span style={{ fontSize: '12px', color: '#666' }}>{r.code} ({r.score})</span>
@@ -357,7 +434,6 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Key Findings */}
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Key Findings</h3>
               {findings.map((f, i) => (
@@ -368,7 +444,6 @@ export default function ResultsPage() {
               ))}
             </div>
 
-            {/* Industry Benchmarking */}
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Industry Benchmarking — Financial Services</h3>
               <p style={{ fontSize: '13px', color: '#666', marginBottom: '24px' }}>How your maturity compares to Financial Services peers at a similar organisational scale</p>
@@ -376,12 +451,12 @@ export default function ResultsPage() {
                 const diff = (item.score - item.avg).toFixed(1)
                 const isAbove = item.score >= item.avg
                 return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                    <div style={{ width: '160px', fontSize: '13px', color: '#444', flexShrink: 0 }}>{item.label}</div>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                    <div style={{ width: '200px', fontSize: '13px', color: '#444', flexShrink: 0 }}>{item.label}</div>
                     <div style={{ flex: 1, position: 'relative', height: '12px', background: '#f0f0f0', borderRadius: '6px' }}>
                       <div style={{ width: `${(item.score / 5) * 100}%`, background: isAbove ? '#1d9e75' : '#ef4444', height: '100%', borderRadius: '6px' }} />
                       <div style={{ position: 'absolute', left: `${(item.avg / 5) * 100}%`, top: '-6px', bottom: '-6px', width: '2px', background: '#0F2744' }} />
-                      <div style={{ position: 'absolute', left: `${(item.avg / 5) * 100}%`, top: '-22px', fontSize: '10px', color: '#666', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>Industry avg {item.avg}</div>
+                      <div style={{ position: 'absolute', left: `${(item.avg / 5) * 100}%`, top: '-22px', fontSize: '10px', color: '#666', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>avg {item.avg}</div>
                     </div>
                     <div style={{ width: '30px', fontSize: '15px', fontWeight: '700', color: '#1a1a2e', textAlign: 'right' }}>{item.score}</div>
                     <div style={{ width: '130px', fontSize: '12px', fontWeight: '600', color: isAbove ? '#1d9e75' : '#ef4444' }}>
@@ -394,34 +469,51 @@ export default function ResultsPage() {
           </div>
         )}
 
-        {/* L3 Breakdown Tab */}
         {activeTab === 'l2breakdown' && (
-          <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '20px' }}>L3 Process Maturity Breakdown</h3>
-            {results.map(r => (
-              <div key={r.code} style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f0f0f0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <span style={{ background: '#4fa3e0', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>{r.code}</span>
-                  <span style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', flex: 1 }}>{r.name}</span>
-                  <span style={{ padding: '3px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', background: getLevelColor(r.level), color: 'white' }}>{r.level}</span>
-                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: getLevelColor(r.level), width: '40px', textAlign: 'right' }}>{r.score}</span>
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '20px' }}>L3 Breakdown by L2 Process</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {l2Results.map(r => (
+                <div key={r.code} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#0F4C81', fontWeight: '700' }}>L2 {r.code}</div>
+                      <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e' }}>{r.name}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ padding: '3px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', background: getLevelColor(r.level), color: 'white' }}>{r.level}</span>
+                      <div style={{ fontSize: '18px', fontWeight: 'bold', color: getLevelColor(r.level), marginTop: '4px' }}>{r.score}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>Maturity Score</div>
+                  <div style={{ background: '#f0f0f0', borderRadius: '4px', height: '8px', marginBottom: '16px' }}>
+                    <div style={{ width: `${(r.score / 5) * 100}%`, background: getLevelColor(r.level), height: '100%', borderRadius: '4px' }} />
+                  </div>
+                  {r.l3s.filter(l => l.score > 0).map((l3, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '600', width: '40px', flexShrink: 0 }}>{l3.code}</span>
+                      <div style={{ flex: 1, background: '#f0f0f0', borderRadius: '4px', height: '6px' }}>
+                        <div style={{ width: `${(l3.score / 5) * 100}%`, background: getLevelColor(l3.level), height: '100%', borderRadius: '4px' }} />
+                      </div>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: getLevelColor(l3.level), width: '25px', textAlign: 'right' }}>{l3.score}</span>
+                    </div>
+                  ))}
+                  {r.l3s.filter(l => l.score > 0).length === 0 && (
+                    <div style={{ fontSize: '13px', color: '#999', fontStyle: 'italic' }}>No responses recorded yet</div>
+                  )}
                 </div>
-                <div style={{ background: '#f0f0f0', borderRadius: '4px', height: '10px' }}>
-                  <div style={{ width: `${(r.score / 5) * 100}%`, background: getLevelColor(r.level), height: '100%', borderRadius: '4px' }} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
-        {/* AI Insights Tab */}
         {activeTab === 'aiinsights' && (
           <div>
             <div style={{ background: '#0F2744', borderRadius: '12px', padding: '24px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
               <div style={{ width: '48px', height: '48px', background: '#1d9e75', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>🤖</div>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>AI-Powered Maturity Insights — Plan to Perform</div>
-                <div style={{ fontSize: '13px', color: '#7db3e8' }}>Generated by FPI Intelligence based on your responses across 48 L3 activities · Assessment completed today</div>
+                <div style={{ fontSize: '13px', color: '#7db3e8' }}>Generated by FPI Intelligence based on your responses · Assessment completed today</div>
               </div>
             </div>
             <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
@@ -454,7 +546,6 @@ export default function ResultsPage() {
           </div>
         )}
 
-        {/* Recommendations Tab */}
         {activeTab === 'recommendations' && (
           <div>
             <div style={{ marginBottom: '20px' }}>
