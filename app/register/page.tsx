@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../lib/supabase'
+
 export default function RegisterPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
@@ -47,7 +48,6 @@ export default function RegisterPage() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      {/* Left Panel */}
       <div style={{ width: '280px', background: '#0F2744', padding: '40px 24px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '48px' }}>
           <div style={{ width: '36px', height: '36px', background: '#4fa3e0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px', color: 'white' }}>FPI</div>
@@ -56,7 +56,6 @@ export default function RegisterPage() {
             <div style={{ color: '#7db3e8', fontSize: '10px', letterSpacing: '0.08em' }}>INTELLIGENCE PLATFORM</div>
           </div>
         </div>
-
         {['Account details', 'Role type', 'Organisation'].map((s, i) => (
           <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', flexShrink: 0, background: step > i + 1 ? '#1d9e75' : step === i + 1 ? 'white' : 'rgba(255,255,255,0.15)', color: step === i + 1 ? '#0F2744' : 'white' }}>
@@ -67,11 +66,9 @@ export default function RegisterPage() {
         ))}
       </div>
 
-      {/* Right Panel */}
       <div style={{ flex: 1, background: '#f4f6f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px' }}>
         <div style={{ width: '100%', maxWidth: '480px', background: 'white', borderRadius: '12px', padding: '40px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
 
-          {/* Step 1 */}
           {step === 1 && (
             <>
               <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '8px' }}>Create your account</h2>
@@ -91,7 +88,6 @@ export default function RegisterPage() {
             </>
           )}
 
-          {/* Step 2 */}
           {step === 2 && (
             <>
               <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '8px' }}>What best describes you?</h2>
@@ -115,7 +111,6 @@ export default function RegisterPage() {
             </>
           )}
 
-          {/* Step 3 */}
           {step === 3 && (
             <>
               <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '8px' }}>Your organisation</h2>
