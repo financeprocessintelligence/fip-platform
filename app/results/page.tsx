@@ -33,6 +33,18 @@ const defaultRecommendations = [
   { priority: '4', action: 'Define FP&A Governance Framework', detail: 'Establish a formal FP&A governance framework including planning calendar, policy repository and internal controls.', impact: 'Medium', effort: 'Medium', timeline: '2 Quarters', owner: 'CFO', l2: '1.7' },
   { priority: '5', action: 'Pilot AI-Assisted Variance Analytics', detail: 'Use your existing BI platform to pilot AI-powered variance detection and narrative generation.', impact: 'Medium', effort: 'Low', timeline: '1 Quarter', owner: 'Head of FP&A', l2: '1.5' },
 ]
+
+type Recommendation = {
+  priority: string
+  action: string
+  detail: string
+  impact: string
+  effort: string
+  timeline: string
+  owner: string
+  l2: string
+}
+
 type AiInsightsData = {
   l2Narratives: Record<string, string>
   strengths: string
@@ -41,27 +53,7 @@ type AiInsightsData = {
   gapQuote: string
   opportunity: string
   keyFindings: { type: string; text: string }[]
-  recommendations?: { priority: string; action: string; detail: string; impact: string; effort: string; timeline: string; owner: string; l2: string }[]
-}
-function getLevel(score: number): string {
-  if (score < 2) return 'Initial'
-  if (score < 3) return 'Repeatable'
-  if (score < 4) return 'Defined'
-  if (score < 5) return 'Managed'
-  return 'Optimised'
-}
-
-function getLevelColor(level: string): string {
-  const colors: Record<string, string> = { 'Initial': '#ef4444', 'Repeatable': '#f97316', 'Defined': '#eab308', 'Managed': '#22c55e', 'Optimised': '#3b82f6' }
-  return colors[level] || '#666'
-}
-
-function getScorePosition(score: number): number {
-  if (score < 2) return 0
-  if (score < 3) return 1
-  if (score < 4) return 2
-  if (score < 5) return 3
-  return 4
+  recommendations?: Recommendation[]
 }
 
 type AssessmentRow = {
@@ -81,14 +73,25 @@ type L2Result = {
   l3s: { code: string; score: number; level: string }[]
 }
 
-type AiInsightsData = {
-  l2Narratives: Record<string, string>
-  strengths: string
-  strengthQuote: string
-  gaps: string
-  gapQuote: string
-  opportunity: string
-  keyFindings: { type: string; text: string }[]
+function getLevel(score: number): string {
+  if (score < 2) return 'Initial'
+  if (score < 3) return 'Repeatable'
+  if (score < 4) return 'Defined'
+  if (score < 5) return 'Managed'
+  return 'Optimised'
+}
+
+function getLevelColor(level: string): string {
+  const colors: Record<string, string> = { 'Initial': '#ef4444', 'Repeatable': '#f97316', 'Defined': '#eab308', 'Managed': '#22c55e', 'Optimised': '#3b82f6' }
+  return colors[level] || '#666'
+}
+
+function getScorePosition(score: number): number {
+  if (score < 2) return 0
+  if (score < 3) return 1
+  if (score < 4) return 2
+  if (score < 5) return 3
+  return 4
 }
 
 function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], hoveredCode: string | null, onHover: (code: string | null) => void }) {
@@ -287,21 +290,6 @@ export default function ResultsPage() {
           console.error('Failed to generate insights', e)
         }
         setGeneratingInsights(false)
-
-        // Generate recommendations separately
-        try {
-          const recsResponse = await fetch('/api/generate-recommendations', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ l2Results: scoredResults, processName: 'Plan to Perform' })
-          })
-          const recsData = await recsResponse.json()
-          if (recsData.success) {
-            setAiInsightsData(prev => prev ? { ...prev, recommendations: recsData.recommendations } : prev)
-          }
-        } catch (e) {
-          console.error('Failed to generate recommendations', e)
-        }
       }
     }
 
@@ -317,7 +305,7 @@ export default function ResultsPage() {
     </div>
   )
 
-  const overallScore = l2Results.length > 0
+  const overallScore = l2Results.filter(r => r.score > 0).length > 0
     ? parseFloat((l2Results.filter(r => r.score > 0).reduce((sum, r) => sum + r.score, 0) / l2Results.filter(r => r.score > 0).length).toFixed(1))
     : 0
   const strongest = l2Results.filter(r => r.score > 0).length > 0 ? l2Results.filter(r => r.score > 0).reduce((a, b) => a.score > b.score ? a : b) : null
@@ -334,6 +322,8 @@ export default function ResultsPage() {
     { type: 'gap', text: 'Lower scoring processes show informal and ad-hoc approaches that need formalisation.' },
     { type: 'opportunity', text: 'Significant opportunity to improve through better tooling and process governance.' },
   ]
+
+  const recommendations = aiInsightsData?.recommendations || defaultRecommendations
 
   return (
     <div style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
@@ -609,9 +599,11 @@ export default function ResultsPage() {
           <div>
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Prioritised Improvement Recommendations</h3>
-              <p style={{ fontSize: '13px', color: '#666' }}>Ranked by impact and effort — focus on high impact, low effort actions first</p>
+              <p style={{ fontSize: '13px', color: '#666' }}>
+                {generatingInsights ? '⏳ Generating AI recommendations...' : 'Ranked by impact and effort — focus on high impact, low effort actions first'}
+              </p>
             </div>
-            {(aiInsightsData?.recommendations || defaultRecommendations).map((r, i) => (
+            {recommendations.map((r, i) => (
               <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px', borderLeft: `4px solid ${r.impact === 'High' && r.effort === 'Low' ? '#1d9e75' : r.impact === 'High' ? '#f97316' : '#eab308'}` }}>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f4f6f9', border: '2px solid #e0e4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '15px', color: '#0F4C81', flexShrink: 0 }}>{r.priority}</div>
@@ -620,7 +612,7 @@ export default function ResultsPage() {
                     <p style={{ fontSize: '13px', color: '#555', lineHeight: '1.7', marginBottom: '12px' }}>{r.detail}</p>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#e8f4fd', color: '#0F4C81' }}>L2 {r.l2}</span>
-                      <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#fef2f2', color: '#ef4444' }}>High Priority</span>
+                      <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#fef2f2', color: '#ef4444' }}>{r.impact} Priority</span>
                       <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: r.effort === 'Low' ? '#f0fdf4' : r.effort === 'Medium' ? '#fefce8' : '#fef2f2', color: r.effort === 'Low' ? '#22c55e' : r.effort === 'Medium' ? '#eab308' : '#ef4444' }}>{r.effort} Effort</span>
                       <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#f4f6f9', color: '#666' }}>Owner: {r.owner}</span>
                     </div>
