@@ -18,37 +18,20 @@ const benchmarkAverages: Record<string, number> = {
   '1.1': 2.4, '1.2': 2.2, '1.3': 2.8, '1.4': 2.5, '1.5': 2.6, '1.6': 2.3, '1.7': 2.1, 'overall': 2.7
 }
 
-const findings = [
-  { type: 'strength', text: 'Refresh Rolling Forecasts shows the highest maturity at Defined level — your forecasting cadence and variance analytics are well established.' },
-  { type: 'strength', text: 'Bottom-up budgeting is structured with clear sign-off processes and revenue planning methodology.' },
-  { type: 'gap', text: 'Cascade the Plan and Govern the Process are at Initial level — planning assumptions are inconsistent and governance frameworks are informal.' },
-  { type: 'gap', text: 'Corrective action tracking lacks formal ownership and monitoring — actions are raised but rarely closed.' },
-  { type: 'opportunity', text: 'Rolling forecasts could be significantly improved with driver-based modelling and EPM tooling.' },
-  { type: 'opportunity', text: 'AI governance is unexplored — significant opportunity to pilot AI-assisted variance analytics.' },
-]
-
-const recommendations = [
-  { priority: '1', action: 'Implement a Formal Corrective Action Tracking Framework', detail: 'Establish a structured process for documenting, assigning and tracking corrective actions following monthly performance reviews.', impact: 'High', effort: 'Low', timeline: '1 Quarter', owner: 'CFO / Finance Director', l2: '1.6' },
-  { priority: '2', action: 'Adopt a Structured Strategic Analysis Framework', detail: 'Introduce a consistent methodology (e.g. PESTLE, SWOT) to replace informal internal workshops.', impact: 'High', effort: 'Medium', timeline: '2 Quarters', owner: 'Finance Director', l2: '1.1' },
-  { priority: '3', action: 'Establish a Central Planning Assumptions Library', detail: 'Create a centralised assumption library accessible to all BUs with Finance ownership.', impact: 'High', effort: 'Medium', timeline: '2 Quarters', owner: 'Head of FP&A', l2: '1.2' },
-  { priority: '4', action: 'Define FP&A Governance Framework', detail: 'Establish a formal FP&A governance framework including planning calendar, policy repository and internal controls.', impact: 'Medium', effort: 'Medium', timeline: '2 Quarters', owner: 'CFO', l2: '1.7' },
-  { priority: '5', action: 'Pilot AI-Assisted Variance Analytics', detail: 'Use your existing BI platform to pilot AI-powered variance detection and narrative generation.', impact: 'Medium', effort: 'Low', timeline: '1 Quarter', owner: 'Head of FP&A', l2: '1.5' },
-]
-
-const aiInsights = {
-  strengths: 'Your organisation demonstrates notably strong capability in rolling forecast management. The monthly driver-based refresh cycle and platform integration put you ahead of approximately 60% of peers at a similar scale. The budgeting process also shows positive maturity at the Defined level, with structured templates and defined planning drivers.',
-  strengthQuote: 'Your forecasting capability is your strongest asset — the monthly driver-based refresh cycle and platform integration put you ahead of approximately 60% of Financial Services peers at a similar scale.',
-  gaps: 'The most significant maturity gap is in corrective action management — firmly in the Initial tier. While performance variances are identified and discussed in monthly reviews, root cause analysis is informal and corrective actions are rarely documented with named owners or tracked to resolution.',
-  gapQuote: 'The absence of a structured corrective action framework means performance gaps identified through strong reporting are not being systematically resolved — this is the highest-priority improvement opportunity.',
-  opportunity: 'With rolling forecasts at Defined maturity and budgeting well structured, your organisation has a strong foundation to accelerate towards Managed maturity. The priority actions are: formalising corrective action tracking, establishing planning governance, and piloting AI-assisted analytics.',
-}
-
 const maturityColumns = [
   { key: 'Initial', label: 'INITIAL', range: '1–1.9', desc: 'Manual, reactive, no documentation', color: '#ef4444', bg: '#fef2f2' },
   { key: 'Repeatable', label: 'REPEATABLE', range: '2–2.9', desc: 'Some standardisation, roles emerging', color: '#f97316', bg: '#fff7ed' },
   { key: 'Defined', label: 'DEFINED', range: '3–3.9', desc: 'Documented, KPIs in place', color: '#eab308', bg: '#fefce8' },
   { key: 'Managed', label: 'MANAGED', range: '4–4.9', desc: 'Data-driven, cross-functional', color: '#22c55e', bg: '#f0fdf4' },
   { key: 'Optimised', label: 'OPTIMISED', range: '5.0', desc: 'Predictive, AI-assisted', color: '#3b82f6', bg: '#eff6ff' },
+]
+
+const defaultRecommendations = [
+  { priority: '1', action: 'Implement a Formal Corrective Action Tracking Framework', detail: 'Establish a structured process for documenting, assigning and tracking corrective actions following monthly performance reviews.', impact: 'High', effort: 'Low', timeline: '1 Quarter', owner: 'CFO / Finance Director', l2: '1.6' },
+  { priority: '2', action: 'Adopt a Structured Strategic Analysis Framework', detail: 'Introduce a consistent methodology (e.g. PESTLE, SWOT) to replace informal internal workshops.', impact: 'High', effort: 'Medium', timeline: '2 Quarters', owner: 'Finance Director', l2: '1.1' },
+  { priority: '3', action: 'Establish a Central Planning Assumptions Library', detail: 'Create a centralised assumption library accessible to all BUs with Finance ownership.', impact: 'High', effort: 'Medium', timeline: '2 Quarters', owner: 'Head of FP&A', l2: '1.2' },
+  { priority: '4', action: 'Define FP&A Governance Framework', detail: 'Establish a formal FP&A governance framework including planning calendar, policy repository and internal controls.', impact: 'Medium', effort: 'Medium', timeline: '2 Quarters', owner: 'CFO', l2: '1.7' },
+  { priority: '5', action: 'Pilot AI-Assisted Variance Analytics', detail: 'Use your existing BI platform to pilot AI-powered variance detection and narrative generation.', impact: 'Medium', effort: 'Low', timeline: '1 Quarter', owner: 'Head of FP&A', l2: '1.5' },
 ]
 
 function getLevel(score: number): string {
@@ -87,6 +70,16 @@ type L2Result = {
   level: string
   narrative: string
   l3s: { code: string; score: number; level: string }[]
+}
+
+type AiInsightsData = {
+  l2Narratives: Record<string, string>
+  strengths: string
+  strengthQuote: string
+  gaps: string
+  gapQuote: string
+  opportunity: string
+  keyFindings: { type: string; text: string }[]
 }
 
 function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], hoveredCode: string | null, onHover: (code: string | null) => void }) {
@@ -220,6 +213,8 @@ export default function ResultsPage() {
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
   const [l2Results, setL2Results] = useState<L2Result[]>([])
   const [loading, setLoading] = useState(true)
+  const [aiInsightsData, setAiInsightsData] = useState<AiInsightsData | null>(null)
+  const [generatingInsights, setGeneratingInsights] = useState(false)
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -254,13 +249,36 @@ export default function ResultsPage() {
           name: step.name,
           score: l2Score,
           level: getLevel(l2Score),
-          narrative: `${step.name} has been assessed based on your responses. Score: ${l2Score}/5.0 — ${getLevel(l2Score)} maturity.`,
+          narrative: `${step.name} — Score: ${l2Score}/5.0`,
           l3s
         }
       })
 
       setL2Results(results)
       setLoading(false)
+
+      const scoredResults = results.filter(r => r.score > 0)
+      if (scoredResults.length > 0) {
+        setGeneratingInsights(true)
+        try {
+          const response = await fetch('/api/generate-insights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ l2Results: scoredResults, processName: 'Plan to Perform' })
+          })
+          const aiData = await response.json()
+          if (aiData.success) {
+            setAiInsightsData(aiData.insights)
+            setL2Results(prev => prev.map(r => ({
+              ...r,
+              narrative: aiData.insights.l2Narratives?.[r.code] || r.narrative
+            })))
+          }
+        } catch (e) {
+          console.error('Failed to generate insights', e)
+        }
+        setGeneratingInsights(false)
+      }
     }
 
     fetchResults()
@@ -278,18 +296,23 @@ export default function ResultsPage() {
   const overallScore = l2Results.length > 0
     ? parseFloat((l2Results.filter(r => r.score > 0).reduce((sum, r) => sum + r.score, 0) / l2Results.filter(r => r.score > 0).length).toFixed(1))
     : 0
-  const strongest = l2Results.length > 0 ? l2Results.reduce((a, b) => a.score > b.score ? a : b) : null
-  const weakest = l2Results.length > 0 ? l2Results.reduce((a, b) => a.score < b.score ? a : b) : null
+  const strongest = l2Results.filter(r => r.score > 0).length > 0 ? l2Results.filter(r => r.score > 0).reduce((a, b) => a.score > b.score ? a : b) : null
+  const weakest = l2Results.filter(r => r.score > 0).length > 0 ? l2Results.filter(r => r.score > 0).reduce((a, b) => a.score < b.score ? a : b) : null
   const hoveredResult = l2Results.find(r => r.code === hoveredCode)
 
   const benchmarks = [
     { label: 'Your overall score', score: overallScore, avg: benchmarkAverages['overall'] },
-    ...l2Results.map(r => ({ label: `${r.code} ${r.name}`, score: r.score, avg: benchmarkAverages[r.code] || 2.5 }))
+    ...l2Results.filter(r => r.score > 0).map(r => ({ label: `${r.code} ${r.name}`, score: r.score, avg: benchmarkAverages[r.code] || 2.5 }))
+  ]
+
+  const keyFindings = aiInsightsData?.keyFindings || [
+    { type: 'strength', text: 'Your highest scoring processes show structured approaches and defined methodologies.' },
+    { type: 'gap', text: 'Lower scoring processes show informal and ad-hoc approaches that need formalisation.' },
+    { type: 'opportunity', text: 'Significant opportunity to improve through better tooling and process governance.' },
   ]
 
   return (
     <div style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
-      {/* Dark Header */}
       <div style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
         <div style={{ fontSize: '12px', color: '#4fa3e0', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Finance Process Maturity Assessment</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -320,7 +343,6 @@ export default function ResultsPage() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
       <div style={{ background: 'white', borderBottom: '1px solid #e0e4ea', padding: '0 40px', display: 'flex' }}>
         {['overview', 'l2breakdown', 'aiinsights', 'recommendations'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '14px 20px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? '700' : '400', color: activeTab === tab ? '#0F4C81' : '#666', borderBottom: activeTab === tab ? '2px solid #0F4C81' : '2px solid transparent', cursor: 'pointer' }}>
@@ -329,9 +351,7 @@ export default function ResultsPage() {
         ))}
       </div>
 
-      {/* Content */}
       <div style={{ padding: '32px 40px' }}>
-
         {activeTab === 'overview' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -401,7 +421,9 @@ export default function ResultsPage() {
                       <span style={{ padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: getLevelColor(hoveredResult.level), color: 'white' }}>{hoveredResult.level}</span>
                       <span style={{ fontSize: '13px', color: '#a0c4e8' }}>Score: {hoveredResult.score} / 5.0</span>
                     </div>
-                    <p style={{ fontSize: '12px', color: '#c8dff0', lineHeight: '1.6', margin: 0 }}>{hoveredResult.narrative}</p>
+                    <p style={{ fontSize: '12px', color: '#c8dff0', lineHeight: '1.6', margin: 0 }}>
+                      {generatingInsights ? 'Generating AI narrative...' : hoveredResult.narrative}
+                    </p>
                   </div>
                 )}
               </div>
@@ -420,7 +442,9 @@ export default function ResultsPage() {
                       <span style={{ padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: getLevelColor(hoveredResult.level), color: 'white' }}>{hoveredResult.level}</span>
                       <span style={{ fontSize: '13px', color: '#a0c4e8' }}>{hoveredResult.score} / 5.0</span>
                     </div>
-                    <p style={{ fontSize: '12px', color: '#c8dff0', lineHeight: '1.6', margin: 0 }}>{hoveredResult.narrative}</p>
+                    <p style={{ fontSize: '12px', color: '#c8dff0', lineHeight: '1.6', margin: 0 }}>
+                      {generatingInsights ? 'Generating AI narrative...' : hoveredResult.narrative}
+                    </p>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
@@ -436,7 +460,7 @@ export default function ResultsPage() {
 
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Key Findings</h3>
-              {findings.map((f, i) => (
+              {keyFindings.map((f, i) => (
                 <div key={i} style={{ display: 'flex', gap: '12px', marginBottom: '10px', padding: '12px', borderRadius: '8px', background: f.type === 'strength' ? '#f0fdf4' : f.type === 'gap' ? '#fef2f2' : '#fffbeb' }}>
                   <span style={{ fontSize: '16px', flexShrink: 0 }}>{f.type === 'strength' ? '✅' : f.type === 'gap' ? '⚠️' : '💡'}</span>
                   <span style={{ fontSize: '13px', color: '#333', lineHeight: '1.6' }}>{f.text}</span>
@@ -485,7 +509,6 @@ export default function ResultsPage() {
                       <div style={{ fontSize: '18px', fontWeight: 'bold', color: getLevelColor(r.level), marginTop: '4px' }}>{r.score}</div>
                     </div>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>Maturity Score</div>
                   <div style={{ background: '#f0f0f0', borderRadius: '4px', height: '8px', marginBottom: '16px' }}>
                     <div style={{ width: `${(r.score / 5) * 100}%`, background: getLevelColor(r.level), height: '100%', borderRadius: '4px' }} />
                   </div>
@@ -513,7 +536,9 @@ export default function ResultsPage() {
               <div style={{ width: '48px', height: '48px', background: '#1d9e75', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>🤖</div>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>AI-Powered Maturity Insights — Plan to Perform</div>
-                <div style={{ fontSize: '13px', color: '#7db3e8' }}>Generated by FPI Intelligence based on your responses · Assessment completed today</div>
+                <div style={{ fontSize: '13px', color: '#7db3e8' }}>
+                  {generatingInsights ? '⏳ Generating AI insights based on your responses...' : 'Generated by FPI Intelligence based on your responses · Assessment completed today'}
+                </div>
               </div>
             </div>
             <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
@@ -521,27 +546,37 @@ export default function ResultsPage() {
                 <span style={{ fontSize: '22px' }}>💪</span>
                 <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>What Your Organisation Does Well</span>
               </div>
-              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>{aiInsights.strengths}</p>
-              <div style={{ borderLeft: '3px solid #1d9e75', background: '#f0fdf4', padding: '14px 16px', borderRadius: '0 8px 8px 0' }}>
-                <p style={{ fontSize: '13px', color: '#15803d', fontStyle: 'italic', lineHeight: '1.6', margin: 0 }}>"{aiInsights.strengthQuote}"</p>
-              </div>
+              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>
+                {generatingInsights ? 'Analysing your responses...' : aiInsightsData?.strengths || 'Complete your assessment to generate AI insights.'}
+              </p>
+              {aiInsightsData?.strengthQuote && (
+                <div style={{ borderLeft: '3px solid #1d9e75', background: '#f0fdf4', padding: '14px 16px', borderRadius: '0 8px 8px 0' }}>
+                  <p style={{ fontSize: '13px', color: '#15803d', fontStyle: 'italic', lineHeight: '1.6', margin: 0 }}>"{aiInsightsData.strengthQuote}"</p>
+                </div>
+              )}
             </div>
             <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                 <span style={{ fontSize: '22px' }}>⚠️</span>
                 <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>Where the Gaps Are</span>
               </div>
-              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>{aiInsights.gaps}</p>
-              <div style={{ borderLeft: '3px solid #ef4444', background: '#fef2f2', padding: '14px 16px', borderRadius: '0 8px 8px 0' }}>
-                <p style={{ fontSize: '13px', color: '#dc2626', fontStyle: 'italic', lineHeight: '1.6', margin: 0 }}>"{aiInsights.gapQuote}"</p>
-              </div>
+              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>
+                {generatingInsights ? 'Analysing your responses...' : aiInsightsData?.gaps || 'Complete your assessment to generate AI insights.'}
+              </p>
+              {aiInsightsData?.gapQuote && (
+                <div style={{ borderLeft: '3px solid #ef4444', background: '#fef2f2', padding: '14px 16px', borderRadius: '0 8px 8px 0' }}>
+                  <p style={{ fontSize: '13px', color: '#dc2626', fontStyle: 'italic', lineHeight: '1.6', margin: 0 }}>"{aiInsightsData.gapQuote}"</p>
+                </div>
+              )}
             </div>
             <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                 <span style={{ fontSize: '22px' }}>💡</span>
                 <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>The Opportunity Ahead</span>
               </div>
-              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8' }}>{aiInsights.opportunity}</p>
+              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8' }}>
+                {generatingInsights ? 'Analysing your responses...' : aiInsightsData?.opportunity || 'Complete your assessment to generate AI insights.'}
+              </p>
             </div>
           </div>
         )}
@@ -552,7 +587,7 @@ export default function ResultsPage() {
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Prioritised Improvement Recommendations</h3>
               <p style={{ fontSize: '13px', color: '#666' }}>Ranked by impact and effort — focus on high impact, low effort actions first</p>
             </div>
-            {recommendations.map((r, i) => (
+            {defaultRecommendations.map((r, i) => (
               <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px', borderLeft: `4px solid ${r.impact === 'High' && r.effort === 'Low' ? '#1d9e75' : r.impact === 'High' ? '#f97316' : '#eab308'}` }}>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f4f6f9', border: '2px solid #e0e4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '15px', color: '#0F4C81', flexShrink: 0 }}>{r.priority}</div>
