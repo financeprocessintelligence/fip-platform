@@ -148,7 +148,7 @@ export default function ProcessExplorer() {
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '14px 16px', background: 'white', borderRadius: '8px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', flexShrink: 0 }}>
           <span style={{ fontSize: '14px', color: '#666' }}>Viewing: <strong style={{ color: '#1a1a2e' }}>{selected}</strong></span>
-          <button style={{ padding: '12px 28px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+          <button onClick={() => router.push('/assessment')} style={{ padding: '12px 28px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
             Start Full Assessment →
           </button>
         </div>
