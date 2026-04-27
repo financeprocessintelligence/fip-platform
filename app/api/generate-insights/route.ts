@@ -51,7 +51,7 @@ Generate 5 recommendations ranked by impact and effort (high impact, low effort 
 
     const message = await client.messages.create({
       model: 'claude-opus-4-5',
-      max_tokens: 3000,
+      max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }],
     })
 
