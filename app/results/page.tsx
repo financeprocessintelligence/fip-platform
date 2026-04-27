@@ -587,7 +587,7 @@ export default function ResultsPage() {
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Prioritised Improvement Recommendations</h3>
               <p style={{ fontSize: '13px', color: '#666' }}>Ranked by impact and effort — focus on high impact, low effort actions first</p>
             </div>
-            {defaultRecommendations.map((r, i) => (
+            {(aiInsightsData?.recommendations || defaultRecommendations).map((r, i) => (
               <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px', borderLeft: `4px solid ${r.impact === 'High' && r.effort === 'Low' ? '#1d9e75' : r.impact === 'High' ? '#f97316' : '#eab308'}` }}>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f4f6f9', border: '2px solid #e0e4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '15px', color: '#0F4C81', flexShrink: 0 }}>{r.priority}</div>

@@ -18,7 +18,7 @@ Please generate the following in JSON format:
 
 {
   "l2Narratives": {
-    "<code>": "<one paragraph narrative for each L2 process explaining what the score means for this organisation>"
+    "<code>": "<one paragraph narrative for each L2 process explaining what the score means>"
   },
   "strengths": "<2-3 sentence paragraph about what the organisation does well based on highest scoring areas>",
   "strengthQuote": "<one powerful pull quote sentence summarising the key strength>",
@@ -26,20 +26,32 @@ Please generate the following in JSON format:
   "gapQuote": "<one powerful pull quote sentence summarising the critical gap>",
   "opportunity": "<2-3 sentence paragraph about the key opportunity to improve maturity>",
   "keyFindings": [
-    {"type": "strength", "text": "<finding>"},
-    {"type": "strength", "text": "<finding>"},
-    {"type": "gap", "text": "<finding>"},
-    {"type": "gap", "text": "<finding>"},
-    {"type": "opportunity", "text": "<finding>"},
-    {"type": "opportunity", "text": "<finding>"}
+    {"type": "strength", "text": "<specific finding based on actual scores>"},
+    {"type": "strength", "text": "<specific finding based on actual scores>"},
+    {"type": "gap", "text": "<specific finding based on actual scores>"},
+    {"type": "gap", "text": "<specific finding based on actual scores>"},
+    {"type": "opportunity", "text": "<specific finding based on actual scores>"},
+    {"type": "opportunity", "text": "<specific finding based on actual scores>"}
+  ],
+  "recommendations": [
+    {
+      "priority": "1",
+      "action": "<specific action title>",
+      "detail": "<2-3 sentence description of what to do and why>",
+      "impact": "High",
+      "effort": "Low",
+      "timeline": "<e.g. 1 Quarter>",
+      "owner": "<e.g. CFO / Head of FP&A>",
+      "l2": "<L2 code this addresses e.g. 1.6>"
+    }
   ]
 }
 
-Be specific, professional and insightful. Reference the actual scores and process names. Keep narratives concise but meaningful. Return ONLY the JSON object, no other text.`
+Generate 5 recommendations ranked by impact and effort (high impact, low effort first). Base them on the actual lowest scoring processes. Be specific, professional and insightful. Reference actual process names and scores. Return ONLY the JSON object, no other text.`
 
     const message = await client.messages.create({
       model: 'claude-opus-4-5',
-      max_tokens: 2000,
+      max_tokens: 3000,
       messages: [{ role: 'user', content: prompt }],
     })
 
