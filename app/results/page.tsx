@@ -278,6 +278,21 @@ export default function ResultsPage() {
           console.error('Failed to generate insights', e)
         }
         setGeneratingInsights(false)
+
+        // Generate recommendations separately
+        try {
+          const recsResponse = await fetch('/api/generate-recommendations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ l2Results: scoredResults, processName: 'Plan to Perform' })
+          })
+          const recsData = await recsResponse.json()
+          if (recsData.success) {
+            setAiInsightsData(prev => prev ? { ...prev, recommendations: recsData.recommendations } : prev)
+          }
+        } catch (e) {
+          console.error('Failed to generate recommendations', e)
+        }
       }
     }
 
