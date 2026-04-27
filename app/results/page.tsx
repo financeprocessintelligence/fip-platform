@@ -33,7 +33,16 @@ const defaultRecommendations = [
   { priority: '4', action: 'Define FP&A Governance Framework', detail: 'Establish a formal FP&A governance framework including planning calendar, policy repository and internal controls.', impact: 'Medium', effort: 'Medium', timeline: '2 Quarters', owner: 'CFO', l2: '1.7' },
   { priority: '5', action: 'Pilot AI-Assisted Variance Analytics', detail: 'Use your existing BI platform to pilot AI-powered variance detection and narrative generation.', impact: 'Medium', effort: 'Low', timeline: '1 Quarter', owner: 'Head of FP&A', l2: '1.5' },
 ]
-
+type AiInsightsData = {
+  l2Narratives: Record<string, string>
+  strengths: string
+  strengthQuote: string
+  gaps: string
+  gapQuote: string
+  opportunity: string
+  keyFindings: { type: string; text: string }[]
+  recommendations?: { priority: string; action: string; detail: string; impact: string; effort: string; timeline: string; owner: string; l2: string }[]
+}
 function getLevel(score: number): string {
   if (score < 2) return 'Initial'
   if (score < 3) return 'Repeatable'
