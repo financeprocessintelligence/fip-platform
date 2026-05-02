@@ -20,6 +20,7 @@ export default function Dashboard() {
   const handleNav = (item: string) => {
     if (item === 'Process Explorer') router.push('/process-explorer')
     if (item === 'My Assessments') router.push('/my-assessments')
+    if (item === 'Reports') router.push('/reports')
   }
 
   return (
