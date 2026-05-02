@@ -83,7 +83,9 @@ export default function ProcessExplorer() {
         </div>
         <p style={{ fontSize: '11px', color: '#a0c4e8', marginBottom: '32px', marginLeft: '46px' }}>Intelligence Platform</p>
         {['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings'].map(item => (
-          <div key={item} onClick={() => item === 'Dashboard' && router.push('/dashboard')} style={{ padding: '10px 12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', background: item === 'Process Explorer' ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
+          <div key={item} onClick={() => git add .
+git commit -m "Fix Reports navigation across all pages"
+git push} style={{ padding: '10px 12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', background: item === 'Process Explorer' ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
             {item}
           </div>
         ))}

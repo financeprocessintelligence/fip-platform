@@ -124,6 +124,7 @@ export default function MyAssessmentsPage() {
             if (item === 'Dashboard') router.push('/dashboard')
             if (item === 'My Assessments') router.push('/my-assessments')
             if (item === 'Process Explorer') router.push('/process-explorer')
+            if (item === 'Reports') router.push('/reports')
 if (item === 'My Assessments') router.push('/my-assessments')
           }} style={{ padding: '10px 12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', background: item === 'My Assessments' ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
             {item}
