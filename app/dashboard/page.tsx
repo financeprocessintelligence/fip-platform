@@ -1,10 +1,15 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 export default function Dashboard() {
   const router = useRouter()
-  
+  const [userName, setUserName] = useState('Ravi')
+  const [assessmentsCompleted, setAssessmentsCompleted] = useState(0)
+  const [overallMaturity, setOverallMaturity] = useState('N/A')
+
   const processes = [
     { name: 'Plan to Perform', code: 'P2P', color: '#0F4C81', available: true },
     { name: 'Record to Report', code: 'R2R', color: '#1a6b5c', available: true },
@@ -22,6 +27,40 @@ export default function Dashboard() {
     if (item === 'My Assessments') router.push('/my-assessments')
     if (item === 'Reports') router.push('/reports')
   }
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      setUserName(user.user_metadata?.full_name || 'Ravi')
+
+      const { data } = await supabase
+        .from('assessments')
+        .select('process_name, score')
+        .eq('user_id', user.id)
+
+      if (!data) return
+
+      // Count unique processes with at least one score
+      const processesWithScores = [...new Set(data.filter(r => r.score !== null).map(r => r.process_name))]
+      setAssessmentsCompleted(processesWithScores.length)
+
+      // Calculate overall maturity
+      const scoredRows = data.filter(r => r.score !== null)
+      if (scoredRows.length > 0) {
+        const avg = scoredRows.reduce((sum, r) => sum + (r.score || 0), 0) / scoredRows.length
+        const score = parseFloat(avg.toFixed(1))
+        let level = 'Initial'
+        if (score >= 4) level = 'Managed'
+        else if (score >= 3) level = 'Defined'
+        else if (score >= 2) level = 'Repeatable'
+        setOverallMaturity(`${score} — ${level}`)
+      }
+    }
+
+    fetchStats()
+  }, [])
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
@@ -46,15 +85,15 @@ export default function Dashboard() {
       {/* Main Content */}
       <div style={{ flex: 1, background: '#f4f6f9', padding: '32px' }}>
         <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a1a2e' }}>Welcome back, Ravi</h1>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a1a2e' }}>Welcome back, {userName}</h1>
           <p style={{ color: '#666', marginTop: '4px' }}>Finance Process Intelligence Platform</p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
           {[
-            { label: 'Assessments Completed', value: '0' },
+            { label: 'Assessments Completed', value: assessmentsCompleted.toString() },
             { label: 'Processes Available', value: '2' },
-            { label: 'Overall Maturity', value: 'N/A' },
+            { label: 'Overall Maturity', value: overallMaturity },
           ].map(stat => (
             <div key={stat.label} style={{ background: 'white', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
               <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#0F4C81' }}>{stat.value}</p>
