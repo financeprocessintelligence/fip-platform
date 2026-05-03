@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import RecommendationChat from '../../components/RecommendationChat'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 const stepDefinitions = [
   { code: '1.1', name: 'Develop Top-down Plan' },
@@ -339,9 +341,21 @@ export default function ResultsPage() {
   const benchmarks = [{ label: 'Your overall score', score: overallScore, avg: benchmarkAverages['overall'] }, ...l2Results.filter(r => r.score > 0).map(r => ({ label: `${r.code} ${r.name}`, score: r.score, avg: benchmarkAverages[r.code] || 2.5 }))]
   const keyFindings = aiInsightsData?.keyFindings || [{ type: 'strength', text: 'Your highest scoring processes show structured approaches.' }, { type: 'gap', text: 'Lower scoring processes need formalisation.' }, { type: 'opportunity', text: 'Opportunity to improve through better tooling.' }]
   const recommendations = aiInsightsData?.recommendations || defaultRecommendations
+const handleDownloadPDF = async () => {
+    const element = document.getElementById('results-content')
+    if (!element) return
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true })
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = (canvas.height * pageWidth) / canvas.width
+    pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight)
+    pdf.save('plan-to-perform-results.pdf')
+  }
 
   return (
-    <div style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
+    
+   <div id="results-content" style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
       <div style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
         <div style={{ fontSize: '12px', color: '#4fa3e0', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Finance Process Maturity Assessment</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -350,7 +364,7 @@ export default function ResultsPage() {
             <p style={{ color: '#a0c4e8', fontSize: '14px' }}>Finance Process Intelligence Platform · Assessment completed today · Confidential</p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>
+            <button onClick={handleDownloadPDF} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>
             <button style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>⬇ Export to Excel</button>
             <button onClick={() => router.push('/dashboard')} style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>← Dashboard</button>
           </div>
