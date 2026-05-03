@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
+import RecommendationChat from '../../components/RecommendationChat'
 
 const stepDefinitions = [
   { code: '1.1', name: 'Close General Ledger Data Sources' },
@@ -221,7 +222,81 @@ function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], ho
       onMouseMove={handleMouseMove} onMouseLeave={() => onHover(null)} />
   )
 }
+// Consultant Request Modal
+function ConsultantModal({ onClose, processName, overallScore }: { onClose: () => void, processName: string, overallScore: number }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
+  const [availability, setAvailability] = useState('')
+  const [submitted, setSubmitted] = useState(false)
 
+  const handleSubmit = async () => {
+    if (!name || !email) return
+    // Save to Supabase
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('recommendation_chats').insert({
+        user_id: user.id,
+        process_name: processName,
+        recommendation_action: 'Consultant Request',
+        messages: [{ role: 'user', content: `Name: ${name}\nEmail: ${email}\nAvailability: ${availability}\nMessage: ${message}` }]
+      })
+    }
+    setSubmitted(true)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ background: 'white', borderRadius: '12px', width: '100%', maxWidth: '520px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        <div style={{ background: '#0F2744', color: 'white', padding: '20px 24px', borderRadius: '12px 12px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#4fa3e0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>👤 FPI Consulting</div>
+            <div style={{ fontSize: '16px', fontWeight: '700' }}>Request a Consultation</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+        </div>
+        <div style={{ padding: '24px' }}>
+          {submitted ? (
+            <div style={{ textAlign: 'center', padding: '24px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '16px' }}>✅</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '8px' }}>Request Submitted!</div>
+              <p style={{ fontSize: '14px', color: '#666' }}>One of our FPI consultants will be in touch within 24 hours to discuss your {processName} assessment results and how we can help you improve.</p>
+              <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Close</button>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: '14px', color: '#555', marginBottom: '20px', lineHeight: '1.6' }}>Our FPI consultants can help you implement your improvement roadmap. Share your details and we'll be in touch within 24 hours.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Your Name *</label>
+                  <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. John Smith" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Email Address *</label>
+                  <input value={email} onChange={e => setEmail(e.target.value)} placeholder="e.g. john@company.com" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Availability</label>
+                  <input value={availability} onChange={e => setAvailability(e.target.value)} placeholder="e.g. Weekday mornings, any time next week" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>What would you like to discuss?</label>
+                  <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="e.g. We need help prioritising our improvement roadmap and building the business case..." style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', minHeight: '80px', resize: 'vertical', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ background: '#f4f6f9', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#666' }}>
+                  📊 Your {processName} assessment (Score: {overallScore}/5.0) will be shared with the consultant to provide context.
+                </div>
+                <button onClick={handleSubmit} disabled={!name || !email} style={{ padding: '12px', background: !name || !email ? '#ccc' : '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: !name || !email ? 'default' : 'pointer' }}>
+                  Submit Request
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 export default function ResultsR2RPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('overview')
@@ -232,6 +307,8 @@ export default function ResultsR2RPage() {
   const [loading, setLoading] = useState(true)
   const [aiInsightsData, setAiInsightsData] = useState<AiInsightsData | null>(null)
   const [generatingInsights, setGeneratingInsights] = useState(false)
+  const [activeChatRec, setActiveChatRec] = useState<Recommendation | null>(null)
+  const [showConsultantModal, setShowConsultantModal] = useState(false)
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -608,6 +685,18 @@ export default function ResultsR2RPage() {
                 {generatingInsights ? '⏳ Generating AI recommendations...' : 'Ranked by impact and effort — focus on high impact, low effort actions first'}
               </p>
             </div>
+            {/* Consultation Banner */}
+            <div style={{ background: 'linear-gradient(135deg, #0F2744 0%, #1a5c45 100%)', borderRadius: '12px', padding: '24px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>👤 Want expert guidance?</div>
+                <div style={{ fontSize: '13px', color: '#a0c4e8' }}>Our FPI consultants can help you implement your R2R improvement roadmap.</div>
+              </div>
+              <button onClick={() => setShowConsultantModal(true)} style={{ padding: '10px 20px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', flexShrink: 0, marginLeft: '16px' }}>
+                Request a Consultation
+              </button>
+            </div>
+
+            {recommendations.map((r, i) => (
             {recommendations.map((r, i) => (
               <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px', borderLeft: `4px solid ${r.impact === 'High' && r.effort === 'Low' ? '#1d9e75' : r.impact === 'High' ? '#f97316' : '#eab308'}` }}>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
@@ -620,6 +709,14 @@ export default function ResultsR2RPage() {
                       <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#fef2f2', color: '#ef4444' }}>{r.impact} Priority</span>
                       <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: r.effort === 'Low' ? '#f0fdf4' : r.effort === 'Medium' ? '#fefce8' : '#fef2f2', color: r.effort === 'Low' ? '#22c55e' : r.effort === 'Medium' ? '#eab308' : '#ef4444' }}>{r.effort} Effort</span>
                       <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#f4f6f9', color: '#666' }}>Owner: {r.owner}</span>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                      <button onClick={() => setActiveChatRec(r)} style={{ padding: '7px 14px', background: '#f4f6f9', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                        💬 Discuss with AI
+                      </button>
+                      <button onClick={() => setShowConsultantModal(true)} style={{ padding: '7px 14px', background: '#f4f6f9', color: '#1d9e75', border: '1px solid #1d9e75', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                        👤 Talk to a Consultant
+                      </button>
+                    </div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -636,6 +733,22 @@ export default function ResultsR2RPage() {
           </div>
         )}
       </div>
+      {activeChatRec && (
+        <RecommendationChat
+          recommendation={activeChatRec}
+          processName="Record to Report"
+          score={overallScore}
+          onClose={() => setActiveChatRec(null)}
+        />
+      )}
+
+      {showConsultantModal && (
+        <ConsultantModal
+          onClose={() => setShowConsultantModal(false)}
+          processName="Record to Report"
+          overallScore={overallScore}
+        />
+      )}
     </div>
   )
 }
