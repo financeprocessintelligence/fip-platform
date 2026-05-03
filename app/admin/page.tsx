@@ -81,11 +81,7 @@ export default function AdminPage() {
       const authUsers = json.users || []
 
       // Fetch all assessments
-      const { data: assessments } = await supabase
-        .from('assessments')
-        .select('user_id, process_name, score, updated_at')
-        const assessmentRows = (assessments || []) as Assessment[]
-
+      const assessmentRows = (json.assessments || []) as Assessment[]
       // Build user summaries
       const userList: UserSummary[] = authUsers.map((u: any) => {
         const userAssessments = assessmentRows.filter(a => a.user_id === u.id)
