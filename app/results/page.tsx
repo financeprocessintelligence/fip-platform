@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
+import RecommendationChat from '../../components/RecommendationChat'
 
 const stepDefinitions = [
   { code: '1.1', name: 'Develop Top-down Plan' },
@@ -102,15 +103,12 @@ function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], ho
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-
     const cx = canvas.width / 2
     const cy = canvas.height / 2
     const radius = 150
     const total = results.length
     const angleStep = (Math.PI * 2) / total
-
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-
     for (let level = 1; level <= 5; level++) {
       ctx.beginPath()
       for (let i = 0; i < total; i++) {
@@ -130,7 +128,6 @@ function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], ho
       ctx.textAlign = 'center'
       ctx.fillText(`${level}`, cx + 4, cy - (radius * level) / 5 + 4)
     }
-
     for (let i = 0; i < total; i++) {
       const angle = i * angleStep - Math.PI / 2
       ctx.beginPath()
@@ -140,7 +137,6 @@ function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], ho
       ctx.lineWidth = 1
       ctx.stroke()
     }
-
     ctx.beginPath()
     for (let i = 0; i < total; i++) {
       const angle = i * angleStep - Math.PI / 2
@@ -156,7 +152,6 @@ function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], ho
     ctx.strokeStyle = '#4fa3e0'
     ctx.lineWidth = 2.5
     ctx.stroke()
-
     for (let i = 0; i < total; i++) {
       const angle = i * angleStep - Math.PI / 2
       const r = (radius * results[i].score) / 5
@@ -167,14 +162,8 @@ function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], ho
       ctx.arc(x, y, isHovered ? 8 : 5, 0, Math.PI * 2)
       ctx.fillStyle = isHovered ? '#0F4C81' : '#4fa3e0'
       ctx.fill()
-      if (isHovered) {
-        ctx.strokeStyle = 'white'
-        ctx.lineWidth = 2
-        ctx.stroke()
-      }
+      if (isHovered) { ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke() }
     }
-
-    ctx.font = '11px sans-serif'
     for (let i = 0; i < total; i++) {
       const angle = i * angleStep - Math.PI / 2
       const r = radius + 28
@@ -204,16 +193,90 @@ function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], ho
       const r = (radius * results[i].score) / 5
       const x = cx + r * Math.cos(angle)
       const y = cy + r * Math.sin(angle)
-      const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2)
-      if (dist < 12) { found = results[i].code; break }
+      if (Math.sqrt((mx - x) ** 2 + (my - y) ** 2) < 12) { found = results[i].code; break }
     }
     onHover(found)
   }
 
   return (
-    <canvas ref={canvasRef} width={420} height={380}
-      style={{ display: 'block', margin: '0 auto', cursor: hoveredCode ? 'pointer' : 'default' }}
+    <canvas ref={canvasRef} width={420} height={380} style={{ display: 'block', margin: '0 auto', cursor: hoveredCode ? 'pointer' : 'default' }}
       onMouseMove={handleMouseMove} onMouseLeave={() => onHover(null)} />
+  )
+}
+
+// Consultant Request Modal
+function ConsultantModal({ onClose, processName, overallScore }: { onClose: () => void, processName: string, overallScore: number }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
+  const [availability, setAvailability] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!name || !email) return
+    // Save to Supabase
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('recommendation_chats').insert({
+        user_id: user.id,
+        process_name: processName,
+        recommendation_action: 'Consultant Request',
+        messages: [{ role: 'user', content: `Name: ${name}\nEmail: ${email}\nAvailability: ${availability}\nMessage: ${message}` }]
+      })
+    }
+    setSubmitted(true)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ background: 'white', borderRadius: '12px', width: '100%', maxWidth: '520px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        <div style={{ background: '#0F2744', color: 'white', padding: '20px 24px', borderRadius: '12px 12px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#4fa3e0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>👤 FPI Consulting</div>
+            <div style={{ fontSize: '16px', fontWeight: '700' }}>Request a Consultation</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+        </div>
+        <div style={{ padding: '24px' }}>
+          {submitted ? (
+            <div style={{ textAlign: 'center', padding: '24px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '16px' }}>✅</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '8px' }}>Request Submitted!</div>
+              <p style={{ fontSize: '14px', color: '#666' }}>One of our FPI consultants will be in touch within 24 hours to discuss your {processName} assessment results and how we can help you improve.</p>
+              <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Close</button>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: '14px', color: '#555', marginBottom: '20px', lineHeight: '1.6' }}>Our FPI consultants can help you implement your improvement roadmap. Share your details and we'll be in touch within 24 hours.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Your Name *</label>
+                  <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. John Smith" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Email Address *</label>
+                  <input value={email} onChange={e => setEmail(e.target.value)} placeholder="e.g. john@company.com" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Availability</label>
+                  <input value={availability} onChange={e => setAvailability(e.target.value)} placeholder="e.g. Weekday mornings, any time next week" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>What would you like to discuss?</label>
+                  <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="e.g. We need help prioritising our improvement roadmap and building the business case..." style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', minHeight: '80px', resize: 'vertical', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ background: '#f4f6f9', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#666' }}>
+                  📊 Your {processName} assessment (Score: {overallScore}/5.0) will be shared with the consultant to provide context.
+                </div>
+                <button onClick={handleSubmit} disabled={!name || !email} style={{ padding: '12px', background: !name || !email ? '#ccc' : '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: !name || !email ? 'default' : 'pointer' }}>
+                  Submit Request
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -227,102 +290,54 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true)
   const [aiInsightsData, setAiInsightsData] = useState<AiInsightsData | null>(null)
   const [generatingInsights, setGeneratingInsights] = useState(false)
+  const [activeChatRec, setActiveChatRec] = useState<Recommendation | null>(null)
+  const [showConsultantModal, setShowConsultantModal] = useState(false)
 
   useEffect(() => {
     const fetchResults = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
-
-      const { data, error } = await supabase
-        .from('assessments')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('process_name', 'Plan to Perform')
-
+      const { data, error } = await supabase.from('assessments').select('*').eq('user_id', user.id).eq('process_name', 'Plan to Perform')
       if (error || !data) { setLoading(false); return }
-
       const rows = data as AssessmentRow[]
-
       const results: L2Result[] = stepDefinitions.map(step => {
         const stepRows = rows.filter(r => r.step_code === step.code)
         const scoredRows = stepRows.filter(r => r.score !== null)
-        const l2Score = scoredRows.length > 0
-          ? parseFloat((scoredRows.reduce((sum, r) => sum + (r.score || 0), 0) / scoredRows.length).toFixed(1))
-          : 0
-
-        const l3s = stepRows.map(r => ({
-          code: r.l3_code,
-          score: r.score || 0,
-          level: getLevel(r.score || 0)
-        }))
-
-        return {
-          code: step.code,
-          name: step.name,
-          score: l2Score,
-          level: getLevel(l2Score),
-          narrative: `${step.name} — Score: ${l2Score}/5.0`,
-          l3s
-        }
+        const l2Score = scoredRows.length > 0 ? parseFloat((scoredRows.reduce((sum, r) => sum + (r.score || 0), 0) / scoredRows.length).toFixed(1)) : 0
+        const l3s = stepRows.map(r => ({ code: r.l3_code, score: r.score || 0, level: getLevel(r.score || 0) }))
+        return { code: step.code, name: step.name, score: l2Score, level: getLevel(l2Score), narrative: `${step.name} — Score: ${l2Score}/5.0`, l3s }
       })
-
       setL2Results(results)
       setLoading(false)
-
       const scoredResults = results.filter(r => r.score > 0)
       if (scoredResults.length > 0) {
         setGeneratingInsights(true)
         try {
-          const response = await fetch('/api/generate-insights', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ l2Results: scoredResults, processName: 'Plan to Perform' })
-          })
+          const response = await fetch('/api/generate-insights', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ l2Results: scoredResults, processName: 'Plan to Perform' }) })
           const aiData = await response.json()
           if (aiData.success) {
             setAiInsightsData(aiData.insights)
-            setL2Results(prev => prev.map(r => ({
-              ...r,
-              narrative: aiData.insights.l2Narratives?.[r.code] || r.narrative
-            })))
+            setL2Results(prev => prev.map(r => ({ ...r, narrative: aiData.insights.l2Narratives?.[r.code] || r.narrative })))
           }
-        } catch (e) {
-          console.error('Failed to generate insights', e)
-        }
+        } catch (e) { console.error('Failed to generate insights', e) }
         setGeneratingInsights(false)
       }
     }
-
     fetchResults()
   }, [router])
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '24px', marginBottom: '12px' }}>⏳</div>
-        <div style={{ fontSize: '16px', color: '#666' }}>Loading your results...</div>
-      </div>
+      <div style={{ textAlign: 'center' }}><div style={{ fontSize: '24px', marginBottom: '12px' }}>⏳</div><div style={{ fontSize: '16px', color: '#666' }}>Loading your results...</div></div>
     </div>
   )
 
-  const overallScore = l2Results.filter(r => r.score > 0).length > 0
-    ? parseFloat((l2Results.filter(r => r.score > 0).reduce((sum, r) => sum + r.score, 0) / l2Results.filter(r => r.score > 0).length).toFixed(1))
-    : 0
+  const overallScore = l2Results.filter(r => r.score > 0).length > 0 ? parseFloat((l2Results.filter(r => r.score > 0).reduce((sum, r) => sum + r.score, 0) / l2Results.filter(r => r.score > 0).length).toFixed(1)) : 0
   const strongest = l2Results.filter(r => r.score > 0).length > 0 ? l2Results.filter(r => r.score > 0).reduce((a, b) => a.score > b.score ? a : b) : null
   const weakest = l2Results.filter(r => r.score > 0).length > 0 ? l2Results.filter(r => r.score > 0).reduce((a, b) => a.score < b.score ? a : b) : null
   const hoveredResult = l2Results.find(r => r.code === hoveredCode)
-
-  const benchmarks = [
-    { label: 'Your overall score', score: overallScore, avg: benchmarkAverages['overall'] },
-    ...l2Results.filter(r => r.score > 0).map(r => ({ label: `${r.code} ${r.name}`, score: r.score, avg: benchmarkAverages[r.code] || 2.5 }))
-  ]
-
-  const keyFindings = aiInsightsData?.keyFindings || [
-    { type: 'strength', text: 'Your highest scoring processes show structured approaches and defined methodologies.' },
-    { type: 'gap', text: 'Lower scoring processes show informal and ad-hoc approaches that need formalisation.' },
-    { type: 'opportunity', text: 'Significant opportunity to improve through better tooling and process governance.' },
-  ]
-
+  const benchmarks = [{ label: 'Your overall score', score: overallScore, avg: benchmarkAverages['overall'] }, ...l2Results.filter(r => r.score > 0).map(r => ({ label: `${r.code} ${r.name}`, score: r.score, avg: benchmarkAverages[r.code] || 2.5 }))]
+  const keyFindings = aiInsightsData?.keyFindings || [{ type: 'strength', text: 'Your highest scoring processes show structured approaches.' }, { type: 'gap', text: 'Lower scoring processes need formalisation.' }, { type: 'opportunity', text: 'Opportunity to improve through better tooling.' }]
   const recommendations = aiInsightsData?.recommendations || defaultRecommendations
 
   return (
@@ -414,12 +429,8 @@ export default function ResultsPage() {
                     {maturityColumns.map((col, colIdx) => (
                       <div key={col.key} style={{ padding: '14px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {r.score > 0 && getScorePosition(r.score) === colIdx && (
-                          <div
-                            onMouseEnter={e => { setHoveredCode(r.code); setTooltipPos({ x: e.clientX, y: e.clientY }) }}
-                            onMouseMove={e => setTooltipPos({ x: e.clientX, y: e.clientY })}
-                            onMouseLeave={() => setHoveredCode(null)}
-                            style={{ width: '20px', height: '20px', borderRadius: '50%', background: getLevelColor(r.level), boxShadow: hoveredCode === r.code ? `0 0 0 4px ${getLevelColor(r.level)}44` : 'none', cursor: 'pointer', transition: 'box-shadow 0.2s' }}
-                          />
+                          <div onMouseEnter={e => { setHoveredCode(r.code); setTooltipPos({ x: e.clientX, y: e.clientY }) }} onMouseMove={e => setTooltipPos({ x: e.clientX, y: e.clientY })} onMouseLeave={() => setHoveredCode(null)}
+                            style={{ width: '20px', height: '20px', borderRadius: '50%', background: getLevelColor(r.level), boxShadow: hoveredCode === r.code ? `0 0 0 4px ${getLevelColor(r.level)}44` : 'none', cursor: 'pointer', transition: 'box-shadow 0.2s' }} />
                         )}
                       </div>
                     ))}
@@ -435,9 +446,7 @@ export default function ResultsPage() {
                       <span style={{ padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: getLevelColor(hoveredResult.level), color: 'white' }}>{hoveredResult.level}</span>
                       <span style={{ fontSize: '13px', color: '#a0c4e8' }}>Score: {hoveredResult.score} / 5.0</span>
                     </div>
-                    <p style={{ fontSize: '12px', color: '#c8dff0', lineHeight: '1.6', margin: 0 }}>
-                      {generatingInsights ? 'Generating AI narrative...' : hoveredResult.narrative}
-                    </p>
+                    <p style={{ fontSize: '12px', color: '#c8dff0', lineHeight: '1.6', margin: 0 }}>{generatingInsights ? 'Generating AI narrative...' : hoveredResult.narrative}</p>
                   </div>
                 )}
               </div>
@@ -456,9 +465,7 @@ export default function ResultsPage() {
                       <span style={{ padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: getLevelColor(hoveredResult.level), color: 'white' }}>{hoveredResult.level}</span>
                       <span style={{ fontSize: '13px', color: '#a0c4e8' }}>{hoveredResult.score} / 5.0</span>
                     </div>
-                    <p style={{ fontSize: '12px', color: '#c8dff0', lineHeight: '1.6', margin: 0 }}>
-                      {generatingInsights ? 'Generating AI narrative...' : hoveredResult.narrative}
-                    </p>
+                    <p style={{ fontSize: '12px', color: '#c8dff0', lineHeight: '1.6', margin: 0 }}>{generatingInsights ? 'Generating AI narrative...' : hoveredResult.narrative}</p>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
@@ -550,9 +557,7 @@ export default function ResultsPage() {
               <div style={{ width: '48px', height: '48px', background: '#1d9e75', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>🤖</div>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>AI-Powered Maturity Insights — Plan to Perform</div>
-                <div style={{ fontSize: '13px', color: '#7db3e8' }}>
-                  {generatingInsights ? '⏳ Generating AI insights based on your responses...' : 'Generated by FPI Intelligence based on your responses · Assessment completed today'}
-                </div>
+                <div style={{ fontSize: '13px', color: '#7db3e8' }}>{generatingInsights ? '⏳ Generating AI insights based on your responses...' : 'Generated by FPI Intelligence based on your responses · Assessment completed today'}</div>
               </div>
             </div>
             <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
@@ -560,9 +565,7 @@ export default function ResultsPage() {
                 <span style={{ fontSize: '22px' }}>💪</span>
                 <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>What Your Organisation Does Well</span>
               </div>
-              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>
-                {generatingInsights ? 'Analysing your responses...' : aiInsightsData?.strengths || 'Complete your assessment to generate AI insights.'}
-              </p>
+              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>{generatingInsights ? 'Analysing your responses...' : aiInsightsData?.strengths || 'Complete your assessment to generate AI insights.'}</p>
               {aiInsightsData?.strengthQuote && (
                 <div style={{ borderLeft: '3px solid #1d9e75', background: '#f0fdf4', padding: '14px 16px', borderRadius: '0 8px 8px 0' }}>
                   <p style={{ fontSize: '13px', color: '#15803d', fontStyle: 'italic', lineHeight: '1.6', margin: 0 }}>"{aiInsightsData.strengthQuote}"</p>
@@ -574,9 +577,7 @@ export default function ResultsPage() {
                 <span style={{ fontSize: '22px' }}>⚠️</span>
                 <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>Where the Gaps Are</span>
               </div>
-              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>
-                {generatingInsights ? 'Analysing your responses...' : aiInsightsData?.gaps || 'Complete your assessment to generate AI insights.'}
-              </p>
+              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>{generatingInsights ? 'Analysing your responses...' : aiInsightsData?.gaps || 'Complete your assessment to generate AI insights.'}</p>
               {aiInsightsData?.gapQuote && (
                 <div style={{ borderLeft: '3px solid #ef4444', background: '#fef2f2', padding: '14px 16px', borderRadius: '0 8px 8px 0' }}>
                   <p style={{ fontSize: '13px', color: '#dc2626', fontStyle: 'italic', lineHeight: '1.6', margin: 0 }}>"{aiInsightsData.gapQuote}"</p>
@@ -588,21 +589,29 @@ export default function ResultsPage() {
                 <span style={{ fontSize: '22px' }}>💡</span>
                 <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>The Opportunity Ahead</span>
               </div>
-              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8' }}>
-                {generatingInsights ? 'Analysing your responses...' : aiInsightsData?.opportunity || 'Complete your assessment to generate AI insights.'}
-              </p>
+              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8' }}>{generatingInsights ? 'Analysing your responses...' : aiInsightsData?.opportunity || 'Complete your assessment to generate AI insights.'}</p>
             </div>
           </div>
         )}
 
         {activeTab === 'recommendations' && (
           <div>
+            {/* Consultation Banner */}
+            <div style={{ background: 'linear-gradient(135deg, #0F2744 0%, #0F4C81 100%)', borderRadius: '12px', padding: '24px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>👤 Want expert guidance?</div>
+                <div style={{ fontSize: '13px', color: '#a0c4e8' }}>Our FPI consultants can help you implement your improvement roadmap and accelerate your maturity journey.</div>
+              </div>
+              <button onClick={() => setShowConsultantModal(true)} style={{ padding: '10px 20px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', flexShrink: 0, marginLeft: '16px' }}>
+                Request a Consultation
+              </button>
+            </div>
+
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Prioritised Improvement Recommendations</h3>
-              <p style={{ fontSize: '13px', color: '#666' }}>
-                {generatingInsights ? '⏳ Generating AI recommendations...' : 'Ranked by impact and effort — focus on high impact, low effort actions first'}
-              </p>
+              <p style={{ fontSize: '13px', color: '#666' }}>{generatingInsights ? '⏳ Generating AI recommendations...' : 'Ranked by impact and effort — focus on high impact, low effort actions first'}</p>
             </div>
+
             {recommendations.map((r, i) => (
               <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px', borderLeft: `4px solid ${r.impact === 'High' && r.effort === 'Low' ? '#1d9e75' : r.impact === 'High' ? '#f97316' : '#eab308'}` }}>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
@@ -610,11 +619,19 @@ export default function ResultsPage() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '8px' }}>{r.action}</div>
                     <p style={{ fontSize: '13px', color: '#555', lineHeight: '1.7', marginBottom: '12px' }}>{r.detail}</p>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
                       <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#e8f4fd', color: '#0F4C81' }}>L2 {r.l2}</span>
                       <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#fef2f2', color: '#ef4444' }}>{r.impact} Priority</span>
                       <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: r.effort === 'Low' ? '#f0fdf4' : r.effort === 'Medium' ? '#fefce8' : '#fef2f2', color: r.effort === 'Low' ? '#22c55e' : r.effort === 'Medium' ? '#eab308' : '#ef4444' }}>{r.effort} Effort</span>
                       <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#f4f6f9', color: '#666' }}>Owner: {r.owner}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => setActiveChatRec(r)} style={{ padding: '7px 14px', background: '#f4f6f9', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                        💬 Discuss with AI
+                      </button>
+                      <button onClick={() => setShowConsultantModal(true)} style={{ padding: '7px 14px', background: '#f4f6f9', color: '#1d9e75', border: '1px solid #1d9e75', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                        👤 Talk to a Consultant
+                      </button>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -631,6 +648,23 @@ export default function ResultsPage() {
           </div>
         )}
       </div>
+
+      {activeChatRec && (
+        <RecommendationChat
+          recommendation={activeChatRec}
+          processName="Plan to Perform"
+          score={overallScore}
+          onClose={() => setActiveChatRec(null)}
+        />
+      )}
+
+      {showConsultantModal && (
+        <ConsultantModal
+          onClose={() => setShowConsultantModal(false)}
+          processName="Plan to Perform"
+          overallScore={overallScore}
+        />
+      )}
     </div>
   )
 }
