@@ -184,7 +184,7 @@ if (item === 'My Assessments') router.push('/my-assessments')
                       </div>
                       <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
                         {p.status === 'completed' || p.averageScore > 0 ? (
-                          <button onClick={() => router.push('/results')} style={{ padding: '10px 20px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                          <button onClick={() => router.push(p.processName === 'Record to Report' ? '/results-r2r' : '/results')} style={{ padding: '10px 20px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                             View Results →
                           </button>
                         ) : null}
