@@ -84,11 +84,10 @@ export default function AdminPage() {
       const { data: assessments } = await supabase
         .from('assessments')
         .select('user_id, process_name, score, updated_at')
-
-      const userList: UserSummary[] = authUsers.map((u: any) => {
+        const assessmentRows = (assessments || []) as Assessment[]
 
       // Build user summaries
-      const userList: UserSummary[] = (authUsers?.users || authUsers || []).map((u: any) => {
+      const userList: UserSummary[] = authUsers.map((u: any) => {
         const userAssessments = assessmentRows.filter(a => a.user_id === u.id)
         const processMap: Record<string, Assessment[]> = {}
         userAssessments.forEach(a => {
