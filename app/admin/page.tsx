@@ -76,14 +76,16 @@ export default function AdminPage() {
 
       // Fetch all users via secure API route
       const res = await fetch('/api/admin/users')
-      const authUsers = await res.json()
+      const json = await res.json()
+      if (!json.success) { console.error('API error:', json.error); setLoading(false); return }
+      const authUsers = json.users || []
 
       // Fetch all assessments
       const { data: assessments } = await supabase
         .from('assessments')
         .select('user_id, process_name, score, updated_at')
 
-      const assessmentRows = (assessments || []) as Assessment[]
+      const userList: UserSummary[] = authUsers.map((u: any) => {
 
       // Build user summaries
       const userList: UserSummary[] = (authUsers?.users || authUsers || []).map((u: any) => {
