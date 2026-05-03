@@ -87,6 +87,7 @@ export default function ProcessExplorer() {
             if (item === 'Dashboard') router.push('/dashboard')
             if (item === 'My Assessments') router.push('/my-assessments')
             if (item === 'Reports') router.push('/reports')
+          if (item === 'Settings') router.push('/settings')
           }} style={{ padding: '10px 12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', background: item === 'Process Explorer' ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
             {item}
           </div>
