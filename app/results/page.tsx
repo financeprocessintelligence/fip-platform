@@ -206,7 +206,6 @@ function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], ho
   )
 }
 
-// Consultant Request Modal
 function ConsultantModal({ onClose, processName, overallScore }: { onClose: () => void, processName: string, overallScore: number }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -216,7 +215,6 @@ function ConsultantModal({ onClose, processName, overallScore }: { onClose: () =
 
   const handleSubmit = async () => {
     if (!name || !email) return
-    // Save to Supabase
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       await supabase.from('recommendation_chats').insert({
@@ -294,6 +292,9 @@ export default function ResultsPage() {
   const [generatingInsights, setGeneratingInsights] = useState(false)
   const [activeChatRec, setActiveChatRec] = useState<Recommendation | null>(null)
   const [showConsultantModal, setShowConsultantModal] = useState(false)
+  const [effortRows, setEffortRows] = useState<any[]>([])
+  const [hourlyRate, setHourlyRate] = useState<number>(0)
+  const [savingPercent, setSavingPercent] = useState<number>(0)
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -326,7 +327,36 @@ export default function ResultsPage() {
       }
     }
     fetchResults()
+
+    const fetchEffort = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('process_effort').select('*').eq('user_id', user.id).eq('process_name', 'Plan to Perform')
+      if (data) {
+        const roiRow = data.find(r => r.step_code === 'roi_settings')
+        if (roiRow) {
+          setHourlyRate(roiRow.hourly_rate || 0)
+          setSavingPercent(roiRow.saving_percent || 0)
+        }
+        setEffortRows(data.filter(r => r.step_code !== 'roi_settings'))
+      }
+    }
+    fetchEffort()
   }, [router])
+
+  const saveROISettings = async (rate: number, percent: number) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('process_effort').upsert({
+      user_id: user.id,
+      process_name: 'Plan to Perform',
+      step_code: 'roi_settings',
+      step_name: 'ROI Settings',
+      hourly_rate: rate,
+      saving_percent: percent,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,process_name,step_code' })
+  }
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'sans-serif' }}>
@@ -341,13 +371,13 @@ export default function ResultsPage() {
   const benchmarks = [{ label: 'Your overall score', score: overallScore, avg: benchmarkAverages['overall'] }, ...l2Results.filter(r => r.score > 0).map(r => ({ label: `${r.code} ${r.name}`, score: r.score, avg: benchmarkAverages[r.code] || 2.5 }))]
   const keyFindings = aiInsightsData?.keyFindings || [{ type: 'strength', text: 'Your highest scoring processes show structured approaches.' }, { type: 'gap', text: 'Lower scoring processes need formalisation.' }, { type: 'opportunity', text: 'Opportunity to improve through better tooling.' }]
   const recommendations = aiInsightsData?.recommendations || defaultRecommendations
-const handleDownloadPDF = () => {
+
+  const handleDownloadPDF = () => {
     router.push('/results-print')
   }
 
   return (
-    
-   <div id="results-content" style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
+    <div id="results-content" style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
       <div style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
         <div style={{ fontSize: '12px', color: '#4fa3e0', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Finance Process Maturity Assessment</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -361,27 +391,34 @@ const handleDownloadPDF = () => {
             <button onClick={() => router.push('/dashboard')} style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>← Dashboard</button>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginTop: '28px' }}>
-          {[
-            { label: 'OVERALL MATURITY SCORE', value: overallScore.toString(), sub: 'out of 5.0', highlight: '#1d9e75' },
-            { label: 'STRONGEST L2 PROCESS', value: strongest?.score.toFixed(1) || '-', sub: strongest?.name || '-', highlight: '#eab308' },
-            { label: 'WEAKEST L2 PROCESS', value: weakest?.score.toFixed(1) || '-', sub: weakest?.name || '-', highlight: '#ef4444' },
-            { label: 'L2 PROCESSES ASSESSED', value: `${l2Results.filter(r => r.score > 0).length}`, sub: `of ${l2Results.length} completed`, highlight: '#4fa3e0' },
-            { label: 'L3 ACTIVITIES COVERED', value: `${l2Results.reduce((sum, r) => sum + r.l3s.filter(l => l.score > 0).length, 0)}`, sub: 'activities assessed', highlight: '#4fa3e0' },
-          ].map(s => (
-            <div key={s.label} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '8px', padding: '16px' }}>
-              <div style={{ fontSize: '10px', color: '#a0c4e8', letterSpacing: '0.06em', marginBottom: '8px' }}>{s.label}</div>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: s.highlight, lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontSize: '12px', color: '#7db3e8', marginTop: '4px' }}>{s.sub}</div>
+
+        <div style={{ display: 'flex', gap: '24px', marginTop: '28px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 28px', textAlign: 'center', minWidth: '120px' }}>
+            <div style={{ fontSize: '42px', fontWeight: 'bold', color: getLevelColor(getLevel(overallScore)) }}>{overallScore}</div>
+            <div style={{ fontSize: '12px', color: '#a0c4e8', marginTop: '4px' }}>Overall Score</div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: getLevelColor(getLevel(overallScore)), marginTop: '4px' }}>{getLevel(overallScore)}</div>
+          </div>
+          {strongest && (
+            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 28px', flex: 1 }}>
+              <div style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Strongest Process</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'white' }}>{strongest.name}</div>
+              <div style={{ fontSize: '13px', color: '#a0c4e8', marginTop: '2px' }}>Score: {strongest.score} — {strongest.level}</div>
             </div>
-          ))}
+          )}
+          {weakest && (
+            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 28px', flex: 1 }}>
+              <div style={{ fontSize: '11px', color: '#f97316', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Priority Focus Area</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'white' }}>{weakest.name}</div>
+              <div style={{ fontSize: '13px', color: '#a0c4e8', marginTop: '2px' }}>Score: {weakest.score} — {weakest.level}</div>
+            </div>
+          )}
         </div>
       </div>
 
       <div style={{ background: 'white', borderBottom: '1px solid #e0e4ea', padding: '0 40px', display: 'flex' }}>
-        {['overview', 'l2breakdown', 'aiinsights', 'recommendations'].map(tab => (
+        {['overview', 'l2breakdown', 'aiinsights', 'recommendations', 'effort'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '14px 20px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? '700' : '400', color: activeTab === tab ? '#0F4C81' : '#666', borderBottom: activeTab === tab ? '2px solid #0F4C81' : '2px solid transparent', cursor: 'pointer' }}>
-            {tab === 'overview' ? 'Overview' : tab === 'l2breakdown' ? 'L3 Breakdown' : tab === 'aiinsights' ? 'AI Insights' : 'Recommendations'}
+            {tab === 'overview' ? 'Overview' : tab === 'l2breakdown' ? 'L3 Breakdown' : tab === 'aiinsights' ? 'AI Insights' : tab === 'recommendations' ? 'Recommendations' : '👥 Effort & ROI'}
           </button>
         ))}
       </div>
@@ -400,96 +437,58 @@ const handleDownloadPDF = () => {
               </div>
             </div>
 
-            {viewMode === 'grid' && (
-              <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px', position: 'relative' }}>
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                  {[{ label: 'Initial (1–1.9)', color: '#ef4444' }, { label: 'Repeatable (2–2.9)', color: '#f97316' }, { label: 'Defined (3–3.9)', color: '#eab308' }, { label: 'Managed (4–4.9)', color: '#22c55e' }, { label: 'Optimised (5.0)', color: '#3b82f6' }].map(l => (
-                    <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: l.color }} />
-                      <span style={{ fontSize: '12px', color: '#666' }}>{l.label}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '200px repeat(5, 1fr)', marginBottom: '4px' }}>
-                  <div style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '700', color: '#666' }}>L2 PROCESS</div>
+            {viewMode === 'grid' ? (
+              <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '200px repeat(5, 1fr)', borderBottom: '2px solid #e0e4ea' }}>
+                  <div style={{ padding: '14px 16px', background: '#f4f6f9', fontSize: '12px', fontWeight: '700', color: '#666', textTransform: 'uppercase' }}>Process</div>
                   {maturityColumns.map(col => (
-                    <div key={col.key} style={{ padding: '10px 12px', fontSize: '11px', fontWeight: '700', color: col.color, textAlign: 'center', background: col.bg, borderRadius: '4px', margin: '0 2px' }}>
-                      <div>{col.label}</div>
-                      <div style={{ fontWeight: '400', color: '#999', fontSize: '10px', marginTop: '2px' }}>{col.range}</div>
+                    <div key={col.key} style={{ padding: '14px 8px', background: col.bg, textAlign: 'center', borderLeft: '1px solid #e0e4ea' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: col.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{col.label}</div>
+                      <div style={{ fontSize: '10px', color: col.color, opacity: 0.8, marginTop: '2px' }}>{col.range}</div>
                     </div>
                   ))}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '200px repeat(5, 1fr)', marginBottom: '8px' }}>
-                  <div style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', color: '#333' }}>Descriptor</div>
-                  {maturityColumns.map(col => (
-                    <div key={col.key} style={{ padding: '6px 12px', fontSize: '11px', color: '#666', textAlign: 'center' }}>{col.desc}</div>
-                  ))}
-                </div>
-                {l2Results.map((r, idx) => (
-                  <div key={r.code} style={{ display: 'grid', gridTemplateColumns: '200px repeat(5, 1fr)', background: idx % 2 === 0 ? '#fafafa' : 'white', borderRadius: '4px', marginBottom: '2px' }}>
-                    <div style={{ padding: '14px 12px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F4C81' }}>L2 {r.code}</div>
-                      <div style={{ fontSize: '13px', color: '#1a1a2e', fontWeight: '500' }}>{r.name}</div>
-                      <div style={{ fontSize: '11px', color: r.score > 0 ? '#999' : '#ef4444', marginTop: '2px' }}>{r.score > 0 ? `Score: ${r.score}` : 'Not assessed'}</div>
+                {l2Results.map((result, i) => (
+                  <div key={result.code} style={{ display: 'grid', gridTemplateColumns: '200px repeat(5, 1fr)', borderBottom: i < l2Results.length - 1 ? '1px solid #f0f0f0' : 'none' }}
+                    onMouseEnter={e => { setHoveredCode(result.code); setTooltipPos({ x: e.clientX, y: e.clientY }) }}
+                    onMouseLeave={() => setHoveredCode(null)}>
+                    <div style={{ padding: '14px 16px', background: hoveredCode === result.code ? '#f0f7ff' : 'white' }}>
+                      <div style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '700' }}>{result.code}</div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a2e', marginTop: '2px' }}>{result.name}</div>
                     </div>
-                    {maturityColumns.map((col, colIdx) => (
-                      <div key={col.key} style={{ padding: '14px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {r.score > 0 && getScorePosition(r.score) === colIdx && (
-                          <div onMouseEnter={e => { setHoveredCode(r.code); setTooltipPos({ x: e.clientX, y: e.clientY }) }} onMouseMove={e => setTooltipPos({ x: e.clientX, y: e.clientY })} onMouseLeave={() => setHoveredCode(null)}
-                            style={{ width: '20px', height: '20px', borderRadius: '50%', background: getLevelColor(r.level), boxShadow: hoveredCode === r.code ? `0 0 0 4px ${getLevelColor(r.level)}44` : 'none', cursor: 'pointer', transition: 'box-shadow 0.2s' }} />
-                        )}
-                      </div>
-                    ))}
+                    {maturityColumns.map((col, j) => {
+                      const pos = getScorePosition(result.score)
+                      const isActive = pos === j && result.score > 0
+                      return (
+                        <div key={col.key} style={{ padding: '14px 8px', background: isActive ? col.bg : hoveredCode === result.code ? '#f8f9fb' : 'white', borderLeft: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                          {isActive && (
+                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 2px 8px ${col.color}60` }}>
+                              <span style={{ color: 'white', fontWeight: '800', fontSize: '13px' }}>{result.score}</span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 ))}
-                {hoveredCode && hoveredResult && (
-                  <div style={{ position: 'fixed', left: tooltipPos.x + 16, top: tooltipPos.y - 10, background: '#0F2744', color: 'white', padding: '14px 16px', borderRadius: '8px', maxWidth: '320px', zIndex: 1000, boxShadow: '0 8px 24px rgba(0,0,0,0.2)', pointerEvents: 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <span style={{ background: '#4fa3e0', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>{hoveredResult.code}</span>
-                      <span style={{ fontWeight: '700', fontSize: '13px' }}>{hoveredResult.name}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                      <span style={{ padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: getLevelColor(hoveredResult.level), color: 'white' }}>{hoveredResult.level}</span>
-                      <span style={{ fontSize: '13px', color: '#a0c4e8' }}>Score: {hoveredResult.score} / 5.0</span>
-                    </div>
-                    <p style={{ fontSize: '12px', color: '#c8dff0', lineHeight: '1.6', margin: 0 }}>{generatingInsights ? 'Generating AI narrative...' : hoveredResult.narrative}</p>
-                  </div>
-                )}
               </div>
-            )}
-
-            {viewMode === 'spider' && (
+            ) : (
               <div style={{ background: 'white', borderRadius: '12px', padding: '32px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px', position: 'relative' }}>
                 <RadarChart results={l2Results} hoveredCode={hoveredCode} onHover={setHoveredCode} />
-                {hoveredCode && hoveredResult && (
-                  <div style={{ position: 'absolute', top: '50%', right: '24px', transform: 'translateY(-50%)', background: '#0F2744', color: 'white', padding: '16px', borderRadius: '8px', width: '260px', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <span style={{ background: '#4fa3e0', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>{hoveredResult.code}</span>
-                      <span style={{ fontWeight: '700', fontSize: '13px' }}>{hoveredResult.name}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                      <span style={{ padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: getLevelColor(hoveredResult.level), color: 'white' }}>{hoveredResult.level}</span>
-                      <span style={{ fontSize: '13px', color: '#a0c4e8' }}>{hoveredResult.score} / 5.0</span>
-                    </div>
-                    <p style={{ fontSize: '12px', color: '#c8dff0', lineHeight: '1.6', margin: 0 }}>{generatingInsights ? 'Generating AI narrative...' : hoveredResult.narrative}</p>
+                {hoveredResult && (
+                  <div style={{ position: 'fixed', left: tooltipPos.x + 12, top: tooltipPos.y - 40, background: '#0F2744', color: 'white', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', zIndex: 100, pointerEvents: 'none', maxWidth: '260px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+                    <div style={{ fontWeight: '700', marginBottom: '4px' }}>{hoveredResult.code} — {hoveredResult.name}</div>
+                    <div style={{ color: getLevelColor(hoveredResult.level), fontWeight: '600', marginBottom: '6px' }}>{hoveredResult.score} / 5.0 — {hoveredResult.level}</div>
+                    <div style={{ fontSize: '12px', color: '#a0c4e8', lineHeight: '1.5' }}>{hoveredResult.narrative}</div>
                   </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
-                  {l2Results.map(r => (
-                    <div key={r.code} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: getLevelColor(r.level) }} />
-                      <span style={{ fontSize: '12px', color: '#666' }}>{r.code} ({r.score})</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
 
-            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Key Findings</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
               {keyFindings.map((f, i) => (
-                <div key={i} style={{ display: 'flex', gap: '12px', marginBottom: '10px', padding: '12px', borderRadius: '8px', background: f.type === 'strength' ? '#f0fdf4' : f.type === 'gap' ? '#fef2f2' : '#fffbeb' }}>
-                  <span style={{ fontSize: '16px', flexShrink: 0 }}>{f.type === 'strength' ? '✅' : f.type === 'gap' ? '⚠️' : '💡'}</span>
+                <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '20px' }}>{f.type === 'strength' ? '💪' : f.type === 'gap' ? '⚠️' : '💡'}</span>
                   <span style={{ fontSize: '13px', color: '#333', lineHeight: '1.6' }}>{f.text}</span>
                 </div>
               ))}
@@ -602,7 +601,6 @@ const handleDownloadPDF = () => {
 
         {activeTab === 'recommendations' && (
           <div>
-            {/* Consultation Banner */}
             <div style={{ background: 'linear-gradient(135deg, #0F2744 0%, #0F4C81 100%)', borderRadius: '12px', padding: '24px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontSize: '16px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>👤 Want expert guidance?</div>
@@ -612,12 +610,10 @@ const handleDownloadPDF = () => {
                 Request a Consultation
               </button>
             </div>
-
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Prioritised Improvement Recommendations</h3>
               <p style={{ fontSize: '13px', color: '#666' }}>{generatingInsights ? '⏳ Generating AI recommendations...' : 'Ranked by impact and effort — focus on high impact, low effort actions first'}</p>
             </div>
-
             {recommendations.map((r, i) => (
               <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px', borderLeft: `4px solid ${r.impact === 'High' && r.effort === 'Low' ? '#1d9e75' : r.impact === 'High' ? '#f97316' : '#eab308'}` }}>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
@@ -651,6 +647,95 @@ const handleDownloadPDF = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {activeTab === 'effort' && (
+          <div>
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>👥 Team & Effort Analysis</h3>
+              <p style={{ fontSize: '13px', color: '#666' }}>Based on the effort data captured during your assessment</p>
+            </div>
+
+            {effortRows.length === 0 ? (
+              <div style={{ background: 'white', borderRadius: '12px', padding: '48px', textAlign: 'center', color: '#999' }}>
+                No effort data captured yet. Complete the Team & Effort questions in the assessment to see your ROI analysis.
+              </div>
+            ) : (
+              <>
+                <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Effort by Process Step</h4>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ background: '#f4f6f9' }}>
+                        {['Step', 'People', 'Hours/Cycle', 'Key Roles', 'Comments'].map(h => (
+                          <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#666', textTransform: 'uppercase' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {effortRows.map((row, i) => (
+                        <tr key={i} style={{ borderTop: '1px solid #f0f0f0' }}>
+                          <td style={{ padding: '10px 12px', fontWeight: '600', color: '#1a1a2e' }}>{row.step_code} {row.step_name}</td>
+                          <td style={{ padding: '10px 12px', color: '#555' }}>{row.headcount || '-'}</td>
+                          <td style={{ padding: '10px 12px', color: '#555' }}>{row.hours_per_cycle || '-'}</td>
+                          <td style={{ padding: '10px 12px', color: '#555' }}>{(row.roles || []).slice(0, 2).join(', ')}{row.roles?.length > 2 ? ` +${row.roles.length - 2} more` : ''}</td>
+                          <td style={{ padding: '10px 12px', color: '#555', fontSize: '12px' }}>{row.comments || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+                  {[
+                    { label: 'Total People', value: effortRows.reduce((sum, r) => sum + (r.headcount || 0), 0).toString(), color: '#0F4C81' },
+                    { label: 'Total Hours/Cycle', value: effortRows.reduce((sum, r) => sum + (r.hours_per_cycle || 0), 0).toString(), color: '#f97316' },
+                    { label: 'Steps with Data', value: effortRows.length.toString(), color: '#1d9e75' },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '32px', fontWeight: 'bold', color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>💰 ROI Calculator</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Average hourly cost per person (£)</div>
+                      <input type="number" min="0" placeholder="e.g. 75" value={hourlyRate || ''} onChange={e => { const val = parseInt(e.target.value) || 0; setHourlyRate(val); saveROISettings(val, savingPercent) }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', color: '#333' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Expected time saving from transformation (%)</div>
+                      <input type="number" min="0" max="100" placeholder="e.g. 30" value={savingPercent || ''} onChange={e => { const val = parseInt(e.target.value) || 0; setSavingPercent(val); saveROISettings(hourlyRate, val) }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', color: '#333' }} />
+                    </div>
+                  </div>
+
+                  {hourlyRate > 0 && savingPercent > 0 && (() => {
+                    const totalHours = effortRows.reduce((sum, r) => sum + (r.hours_per_cycle || 0), 0)
+                    const currentCost = totalHours * hourlyRate
+                    const savingHours = Math.round(totalHours * (savingPercent / 100))
+                    const savingCost = Math.round(currentCost * (savingPercent / 100))
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '20px', background: '#f0fdf4', borderRadius: '10px' }}>
+                        {[
+                          { label: 'Current Cost/Cycle', value: `£${currentCost.toLocaleString()}`, color: '#ef4444' },
+                          { label: 'Hours Saved/Cycle', value: `${savingHours} hrs`, color: '#f97316' },
+                          { label: 'Potential Saving/Cycle', value: `£${savingCost.toLocaleString()}`, color: '#1d9e75' },
+                        ].map(s => (
+                          <div key={s.label} style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '28px', fontWeight: 'bold', color: s.color }}>{s.value}</div>
+                            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
