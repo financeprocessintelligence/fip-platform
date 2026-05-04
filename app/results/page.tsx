@@ -433,7 +433,14 @@ export default function ResultsPage() {
             </div>
 
             {viewMode === 'grid' ? (
-              <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
+              <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px', position: 'relative' }}>
+                {hoveredResult && (
+                  <div style={{ position: 'fixed', left: tooltipPos.x + 12, top: tooltipPos.y - 40, background: '#0F2744', color: 'white', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', zIndex: 100, pointerEvents: 'none', maxWidth: '260px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+                    <div style={{ fontWeight: '700', marginBottom: '4px' }}>{hoveredResult.code} — {hoveredResult.name}</div>
+                    <div style={{ color: getLevelColor(hoveredResult.level), fontWeight: '600', marginBottom: '6px' }}>{hoveredResult.score} / 5.0 — {hoveredResult.level}</div>
+                    <div style={{ fontSize: '12px', color: '#a0c4e8', lineHeight: '1.5' }}>{generatingInsights ? '⏳ Generating AI insight...' : hoveredResult.narrative}</div>
+                  </div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: '200px repeat(5, 1fr)', borderBottom: '2px solid #e0e4ea' }}>
                   <div style={{ padding: '14px 16px', background: '#f4f6f9', fontSize: '12px', fontWeight: '700', color: '#666', textTransform: 'uppercase' }}>Process</div>
                   {maturityColumns.map(col => (
@@ -474,7 +481,7 @@ export default function ResultsPage() {
                   <div style={{ position: 'fixed', left: tooltipPos.x + 12, top: tooltipPos.y - 40, background: '#0F2744', color: 'white', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', zIndex: 100, pointerEvents: 'none', maxWidth: '260px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
                     <div style={{ fontWeight: '700', marginBottom: '4px' }}>{hoveredResult.code} — {hoveredResult.name}</div>
                     <div style={{ color: getLevelColor(hoveredResult.level), fontWeight: '600', marginBottom: '6px' }}>{hoveredResult.score} / 5.0 — {hoveredResult.level}</div>
-                    <div style={{ fontSize: '12px', color: '#a0c4e8', lineHeight: '1.5' }}>{hoveredResult.narrative}</div>
+                    <div style={{ fontSize: '12px', color: '#a0c4e8', lineHeight: '1.5' }}>{generatingInsights ? '⏳ Generating AI insight...' : hoveredResult.narrative}</div>
                   </div>
                 )}
               </div>
