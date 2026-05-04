@@ -251,19 +251,19 @@ function ConsultantModal({ onClose, processName, overallScore }: { onClose: () =
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Your Name *</label>
-                  <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. John Smith" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box' }} />
+                  <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. John Smith" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box', color: '#333' }} />
                 </div>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Email Address *</label>
-                  <input value={email} onChange={e => setEmail(e.target.value)} placeholder="e.g. john@company.com" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box' }} />
+                  <input value={email} onChange={e => setEmail(e.target.value)} placeholder="e.g. john@company.com" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box', color: '#333' }} />
                 </div>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Availability</label>
-                  <input value={availability} onChange={e => setAvailability(e.target.value)} placeholder="e.g. Weekday mornings, any time next week" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box' }} />
+                  <input value={availability} onChange={e => setAvailability(e.target.value)} placeholder="e.g. Weekday mornings, any time next week" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', boxSizing: 'border-box', color: '#333' }} />
                 </div>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>What would you like to discuss?</label>
-                  <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="e.g. We need help prioritising our improvement roadmap and building the business case..." style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', minHeight: '80px', resize: 'vertical', boxSizing: 'border-box' }} />
+                  <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="e.g. We need help prioritising our improvement roadmap and building the business case..." style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', minHeight: '80px', resize: 'vertical', boxSizing: 'border-box', color: '#333' }} />
                 </div>
                 <div style={{ background: '#f4f6f9', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#666' }}>
                   📊 Your {processName} assessment (Score: {overallScore}/5.0) will be shared with the consultant to provide context.
