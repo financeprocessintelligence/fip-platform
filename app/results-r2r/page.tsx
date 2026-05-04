@@ -354,6 +354,15 @@ export default function ResultsR2RPage() {
       setL2Results(results)
       setLoading(false)
 
+      const effortResult = await supabase.from('process_effort').select('*').eq('user_id', user.id).eq('process_name', 'Record to Report')
+      const effortData = effortResult.data || []
+      const roiRow = effortData.find((r: any) => r.step_code === 'roi_settings')
+      const loadedHourlyRate = roiRow?.hourly_rate || 0
+      const loadedSavingPercent = roiRow?.saving_percent || 0
+      const filteredEffort = effortData.filter((r: any) => r.step_code !== 'roi_settings')
+      if (roiRow) { setHourlyRate(loadedHourlyRate); setSavingPercent(loadedSavingPercent) }
+      setEffortRows(filteredEffort)
+
       const scoredResults = results.filter(r => r.score > 0)
       if (scoredResults.length > 0) {
         setGeneratingInsights(true)
@@ -361,7 +370,7 @@ export default function ResultsR2RPage() {
           const response = await fetch('/api/generate-insights', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ l2Results: scoredResults, processName: 'Record to Report' })
+            body: JSON.stringify({ l2Results: scoredResults, processName: 'Record to Report', effortData: filteredEffort, hourlyRate: loadedHourlyRate, savingPercent: loadedSavingPercent })
           })
           const aiData = await response.json()
           if (aiData.success) {
@@ -380,20 +389,7 @@ export default function ResultsR2RPage() {
 
     fetchResults()
 
-    const fetchEffort = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase.from('process_effort').select('*').eq('user_id', user.id).eq('process_name', 'Record to Report')
-      if (data) {
-        const roiRow = data.find(r => r.step_code === 'roi_settings')
-        if (roiRow) {
-          setHourlyRate(roiRow.hourly_rate || 0)
-          setSavingPercent(roiRow.saving_percent || 0)
-        }
-        setEffortRows(data.filter(r => r.step_code !== 'roi_settings'))
-      }
-    }
-    fetchEffort()
+    
   }, [router])
 
   if (loading) return (
