@@ -309,6 +309,9 @@ export default function ResultsR2RPage() {
   const [generatingInsights, setGeneratingInsights] = useState(false)
   const [activeChatRec, setActiveChatRec] = useState<Recommendation | null>(null)
   const [showConsultantModal, setShowConsultantModal] = useState(false)
+  const [effortRows, setEffortRows] = useState<any[]>([])
+  const [hourlyRate, setHourlyRate] = useState<number>(0)
+  const [savingPercent, setSavingPercent] = useState<number>(0)
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -376,6 +379,21 @@ export default function ResultsR2RPage() {
     }
 
     fetchResults()
+
+    const fetchEffort = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('process_effort').select('*').eq('user_id', user.id).eq('process_name', 'Record to Report')
+      if (data) {
+        const roiRow = data.find(r => r.step_code === 'roi_settings')
+        if (roiRow) {
+          setHourlyRate(roiRow.hourly_rate || 0)
+          setSavingPercent(roiRow.saving_percent || 0)
+        }
+        setEffortRows(data.filter(r => r.step_code !== 'roi_settings'))
+      }
+    }
+    fetchEffort()
   }, [router])
 
   if (loading) return (
@@ -392,6 +410,19 @@ export default function ResultsR2RPage() {
     : 0
   const strongest = l2Results.filter(r => r.score > 0).length > 0 ? l2Results.filter(r => r.score > 0).reduce((a, b) => a.score > b.score ? a : b) : null
   const weakest = l2Results.filter(r => r.score > 0).length > 0 ? l2Results.filter(r => r.score > 0).reduce((a, b) => a.score < b.score ? a : b) : null
+  const saveROISettings = async (rate: number, percent: number) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('process_effort').upsert({
+      user_id: user.id,
+      process_name: 'Record to Report',
+      step_code: 'roi_settings',
+      step_name: 'ROI Settings',
+      hourly_rate: rate,
+      saving_percent: percent,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,process_name,step_code' })
+  }
   const hoveredResult = l2Results.find(r => r.code === hoveredCode)
 
   const benchmarks = [
@@ -440,9 +471,9 @@ export default function ResultsR2RPage() {
       </div>
 
       <div style={{ background: 'white', borderBottom: '1px solid #e0e4ea', padding: '0 40px', display: 'flex' }}>
-        {['overview', 'l2breakdown', 'aiinsights', 'recommendations'].map(tab => (
+        {['overview', 'l2breakdown', 'effort', 'aiinsights', 'recommendations'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '14px 20px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? '700' : '400', color: activeTab === tab ? '#0F4C81' : '#666', borderBottom: activeTab === tab ? '2px solid #0F4C81' : '2px solid transparent', cursor: 'pointer' }}>
-            {tab === 'overview' ? 'Overview' : tab === 'l2breakdown' ? 'L3 Breakdown' : tab === 'aiinsights' ? 'AI Insights' : 'Recommendations'}
+            {tab === 'overview' ? 'Overview' : tab === 'l2breakdown' ? 'L3 Breakdown' : tab === 'effort' ? '👥 Effort & ROI' : tab === 'aiinsights' ? 'AI Insights' : 'Recommendations'}
           </button>
         ))}
       </div>
@@ -732,7 +763,96 @@ export default function ResultsR2RPage() {
             ))}
           </div>
         )}
+      {activeTab === 'effort' && (
+          <div>
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>👥 Team & Effort Analysis</h3>
+              <p style={{ fontSize: '13px', color: '#666' }}>Based on the effort data captured during your assessment</p>
+            </div>
+
+            {effortRows.length === 0 ? (
+              <div style={{ background: 'white', borderRadius: '12px', padding: '48px', textAlign: 'center', color: '#999' }}>
+                No effort data captured yet. Complete the Team & Effort questions in the assessment to see your ROI analysis.
+              </div>
+            ) : (
+              <>
+                <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Effort by Process Step</h4>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ background: '#f4f6f9' }}>
+                        {['Step', 'People', 'Hours/Cycle', 'Key Roles', 'Comments'].map(h => (
+                          <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#666', textTransform: 'uppercase' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {effortRows.map((row, i) => (
+                        <tr key={i} style={{ borderTop: '1px solid #f0f0f0' }}>
+                          <td style={{ padding: '10px 12px', fontWeight: '600', color: '#1a1a2e' }}>{row.step_code} {row.step_name}</td>
+                          <td style={{ padding: '10px 12px', color: '#555' }}>{row.headcount || '-'}</td>
+                          <td style={{ padding: '10px 12px', color: '#555' }}>{row.hours_per_cycle || '-'}</td>
+                          <td style={{ padding: '10px 12px', color: '#555' }}>{(row.roles || []).slice(0, 2).join(', ')}{row.roles?.length > 2 ? ` +${row.roles.length - 2} more` : ''}</td>
+                          <td style={{ padding: '10px 12px', color: '#555', fontSize: '12px' }}>{row.comments || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+                  {[
+                    { label: 'Total People', value: effortRows.reduce((sum, r) => sum + (r.headcount || 0), 0).toString(), color: '#0F4C81' },
+                    { label: 'Total Hours/Cycle', value: effortRows.reduce((sum, r) => sum + (r.hours_per_cycle || 0), 0).toString(), color: '#f97316' },
+                    { label: 'Steps with Data', value: effortRows.length.toString(), color: '#1d9e75' },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '32px', fontWeight: 'bold', color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>💰 ROI Calculator</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Average hourly cost per person (£)</div>
+                      <input type="number" min="0" placeholder="e.g. 75" value={hourlyRate || ''} onChange={e => { const val = parseInt(e.target.value) || 0; setHourlyRate(val); saveROISettings(val, savingPercent) }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', color: '#333' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Expected time saving from transformation (%)</div>
+                      <input type="number" min="0" max="100" placeholder="e.g. 30" value={savingPercent || ''} onChange={e => { const val = parseInt(e.target.value) || 0; setSavingPercent(val); saveROISettings(hourlyRate, val) }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', color: '#333' }} />
+                    </div>
+                  </div>
+
+                  {hourlyRate > 0 && savingPercent > 0 && (() => {
+                    const totalHours = effortRows.reduce((sum, r) => sum + (r.hours_per_cycle || 0), 0)
+                    const currentCost = totalHours * hourlyRate
+                    const savingHours = Math.round(totalHours * (savingPercent / 100))
+                    const savingCost = Math.round(currentCost * (savingPercent / 100))
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '20px', background: '#f0fdf4', borderRadius: '10px' }}>
+                        {[
+                          { label: 'Current Cost/Cycle', value: `£${currentCost.toLocaleString()}`, color: '#ef4444' },
+                          { label: 'Hours Saved/Cycle', value: `${savingHours} hrs`, color: '#f97316' },
+                          { label: 'Potential Saving/Cycle', value: `£${savingCost.toLocaleString()}`, color: '#1d9e75' },
+                        ].map(s => (
+                          <div key={s.label} style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '28px', fontWeight: 'bold', color: s.color }}>{s.value}</div>
+                            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
+
       {activeChatRec && (
         <RecommendationChat
           recommendation={activeChatRec}
