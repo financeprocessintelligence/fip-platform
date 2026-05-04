@@ -181,6 +181,7 @@ export default function AssessmentR2RPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
   const [toolAnswers, setToolAnswers] = useState<ToolAnswers>({})
+  const [effortData, setEffortData] = useState<Record<string, { headcount: number; roles: string[]; hoursPerCycle: number; comments: string }>>({})
   const [saving, setSaving] = useState(false)
 
   const step = steps[currentStep]
@@ -250,6 +251,24 @@ export default function AssessmentR2RPage() {
 
     for (const row of rows) {
       await supabase.from('assessments').upsert(row, { onConflict: 'user_id,l3_code' })
+    }
+
+    // Save effort data
+    for (const s of steps) {
+      const effort = effortData[s.code]
+      if (effort) {
+        await supabase.from('process_effort').upsert({
+          user_id: user.id,
+          process_name: 'Record to Report',
+          step_code: s.code,
+          step_name: s.name,
+          headcount: effort.headcount || 0,
+          roles: effort.roles || [],
+          hours_per_cycle: effort.hoursPerCycle || 0,
+          comments: effort.comments || '',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,process_name,step_code' })
+      }
     }
 
     setSaving(false)
@@ -335,6 +354,42 @@ export default function AssessmentR2RPage() {
               <div style={{ fontSize: '13px', color: '#666', marginBottom: '6px' }}>List the main tools or templates used</div>
               <input type="text" placeholder="e.g. SAP, Oracle, Blackline, HFM, Tagetik..." value={toolAnswers[step.code]?.tools || ''} onChange={e => updateTools(step.code, e.target.value)} style={inputStyle} />
               <div style={{ fontSize: '11px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>This helps us assess your R2R maturity and recommend the right tool overlays.</div>
+            </div>
+
+            {/* Effort Questions */}
+            <div style={{ marginTop: '24px', padding: '20px', background: '#f0f7ff', borderRadius: '10px', border: '1px solid #d0e8ff' }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#0F4C81', marginBottom: '16px' }}>👥 Team & Effort</div>
+              
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>How many people are involved in this step?</div>
+                <input type="number" min="0" placeholder="e.g. 3" value={effortData[step.code]?.headcount || ''} onChange={e => setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: parseInt(e.target.value) || 0, roles: prev[step.code]?.roles || [], hoursPerCycle: prev[step.code]?.hoursPerCycle || 0, comments: prev[step.code]?.comments || '' } }))} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '120px', color: '#333', background: 'white' }} />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>What roles are involved? (select all that apply)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  {['CFO / Finance Director', 'Financial Controller', 'FP&A Manager / Analyst', 'Management Accountant', 'Financial Accountant', 'Accounts Payable / Receivable', 'Treasury Analyst', 'Tax Manager', 'Business Partner', 'Operations Manager', 'Department Budget Holder', 'ERP/Systems Administrator', 'IT Manager', 'Data Analyst / BI Developer', 'External Auditor', 'Outsourced Provider'].map(role => (
+                    <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={effortData[step.code]?.roles?.includes(role) || false} onChange={() => {
+                        const current = effortData[step.code]?.roles || []
+                        const updated = current.includes(role) ? current.filter(r => r !== role) : [...current, role]
+                        setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: prev[step.code]?.headcount || 0, roles: updated, hoursPerCycle: prev[step.code]?.hoursPerCycle || 0, comments: prev[step.code]?.comments || '' } }))
+                      }} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
+                      <span style={{ fontSize: '12px', color: '#333' }}>{role}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>How many hours per close cycle does the team spend on this step?</div>
+                <input type="number" min="0" placeholder="e.g. 40" value={effortData[step.code]?.hoursPerCycle || ''} onChange={e => setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: prev[step.code]?.headcount || 0, roles: prev[step.code]?.roles || [], hoursPerCycle: parseInt(e.target.value) || 0, comments: prev[step.code]?.comments || '' } }))} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '120px', color: '#333', background: 'white' }} />
+              </div>
+
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Any additional comments about this step's team or effort?</div>
+                <textarea placeholder="e.g. This step involves the external audit team during year-end..." value={effortData[step.code]?.comments || ''} onChange={e => setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: prev[step.code]?.headcount || 0, roles: prev[step.code]?.roles || [], hoursPerCycle: prev[step.code]?.hoursPerCycle || 0, comments: e.target.value } }))} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', minHeight: '80px', resize: 'vertical', color: '#333', background: 'white' }} />
+              </div>
             </div>
           </div>
         </div>
