@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
+
 const steps = [
   {
     code: '1.1',
@@ -121,7 +122,18 @@ type ToolAnswers = Record<string, { selected: string[]; tools: string }>
 
 function AssessmentPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const codeParam = searchParams.get('code')
+  const initialStep = codeParam ? Math.max(0, steps.findIndex(s => s.code === codeParam)) : 0
+  const [currentStep, setCurrentStep] = useState(initialStep)
+  const [answers, setAnswers] = useState<Answers>({})
+  const [toolAnswers, setToolAnswers] = useState<ToolAnswers>({})
+  const [effortData, setEffortData] = useState<Record<string, { headcount: number; roles: string[]; hoursPerCycle: number; comments: string }>>({})
+  const [showReview, setShowReview] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  const step = steps[currentStep]
+  const totalAnswered = step.l3s.filter(l3 => answers[l3.code]?.selected?.length > 0).length
 
   const saveToSupabase = async (complete: boolean) => {
     setSaving(true)
@@ -133,7 +145,6 @@ function AssessmentPage() {
       for (const l3 of s.l3s) {
         const ans = answers[l3.code]
         const toolAns = toolAnswers[s.code]
-        // Score: map selected options to maturity scores (first option = 5, last = 1)
         let score = 0
         if (ans?.selected?.length > 0) {
           const maxScore = Math.max(...ans.selected.filter(o => o !== 'Other').map(o => {
@@ -162,7 +173,6 @@ function AssessmentPage() {
       await supabase.from('assessments').upsert(row, { onConflict: 'user_id,l3_code' })
     }
 
-    // Save effort data
     for (const s of steps) {
       const effort = effortData[s.code]
       if (effort) {
@@ -183,16 +193,6 @@ function AssessmentPage() {
     setSaving(false)
     if (complete) router.push('/results')
   }
-  const searchParams = useSearchParams()
-const codeParam = searchParams.get('code')
-const initialStep = codeParam ? Math.max(0, steps.findIndex(s => s.code === codeParam)) : 0
-const [currentStep, setCurrentStep] = useState(initialStep)
-  const [answers, setAnswers] = useState<Answers>({})
-  const [toolAnswers, setToolAnswers] = useState<ToolAnswers>({})
-  const [effortData, setEffortData] = useState<Record<string, { headcount: number; roles: string[]; hoursPerCycle: number; comments: string }>>({})
-
-  const step = steps[currentStep]
-  const totalAnswered = step.l3s.filter(l3 => answers[l3.code]?.selected?.length > 0).length
 
   const toggleOption = (l3Code: string, option: string) => {
     setAnswers(prev => {
@@ -222,6 +222,49 @@ const [currentStep, setCurrentStep] = useState(initialStep)
     setToolAnswers(prev => ({ ...prev, [stepCode]: { ...prev[stepCode], selected: prev[stepCode]?.selected || [], tools: value } }))
   }
 
+  const handleExportExcel = () => {
+    // Build CSV data for responses
+    const responseRows: string[][] = [['Step Code', 'Step Name', 'L3 Code', 'L3 Name', 'Selected Options', 'Other', 'Pain Point', 'Score']]
+    for (const s of steps) {
+      for (const l3 of s.l3s) {
+        const ans = answers[l3.code]
+        let score = 0
+        if (ans?.selected?.length > 0) {
+          const maxScore = Math.max(...(ans.selected.filter(o => o !== 'Other').map(o => {
+            const idx = l3.options.indexOf(o)
+            if (idx === -1) return 1
+            return Math.max(1, 5 - idx)
+          })))
+          score = maxScore
+        }
+        responseRows.push([s.code, s.name, l3.code, l3.name, (ans?.selected || []).join('; '), ans?.other || '', ans?.painPoint || '', score.toString()])
+      }
+      const toolAns = toolAnswers[s.code]
+      if (toolAns) {
+        responseRows.push([s.code, s.name, 'TOOL', 'Tool Usage', (toolAns.selected || []).join('; '), toolAns.tools || '', '', ''])
+      }
+    }
+
+    const effortRows: string[][] = [['Step Code', 'Step Name', 'Headcount', 'Hours/Cycle', 'Roles', 'Comments']]
+    for (const s of steps) {
+      const e = effortData[s.code]
+      if (e) {
+        effortRows.push([s.code, s.name, (e.headcount || 0).toString(), (e.hoursPerCycle || 0).toString(), (e.roles || []).join('; '), e.comments || ''])
+      }
+    }
+
+    const toCSV = (rows: string[][]) => rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')
+    const sheet1 = 'RESPONSES\n' + toCSV(responseRows)
+    const sheet2 = '\n\nEFFORT & ROI\n' + toCSV(effortRows)
+    const blob = new Blob([sheet1 + sheet2], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'plan-to-perform-responses.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '13px', color: '#1a1a2e', background: 'white', marginTop: '6px' }
 
   return (
@@ -235,139 +278,210 @@ const [currentStep, setCurrentStep] = useState(initialStep)
         <p style={{ fontSize: '11px', color: '#a0c4e8', marginBottom: '32px', marginLeft: '46px' }}>Intelligence Platform</p>
         <p style={{ fontSize: '11px', color: '#a0c4e8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plan to Perform</p>
         {steps.map((s, i) => (
-          <div key={s.code} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', opacity: i === currentStep ? 1 : 0.5 }}>
-            <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: i < currentStep ? '#1d9e75' : i === currentStep ? 'white' : 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold', color: i === currentStep ? '#0F4C81' : 'white', flexShrink: 0 }}>
-              {i < currentStep ? '✓' : i + 1}
+          <div key={s.code} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', opacity: i === currentStep && !showReview ? 1 : 0.5 }}>
+            <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: i < currentStep || showReview ? '#1d9e75' : i === currentStep ? 'white' : 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold', color: i === currentStep && !showReview ? '#0F4C81' : 'white', flexShrink: 0 }}>
+              {i < currentStep || showReview ? '✓' : i + 1}
             </div>
-            <span style={{ fontSize: '12px', color: i === currentStep ? 'white' : '#a0c4e8', fontWeight: i === currentStep ? '600' : '400' }}>{s.name}</span>
+            <span style={{ fontSize: '12px', color: i === currentStep && !showReview ? 'white' : '#a0c4e8', fontWeight: i === currentStep && !showReview ? '600' : '400' }}>{s.name}</span>
           </div>
         ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', opacity: showReview ? 1 : 0.5 }}>
+          <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: showReview ? 'white' : 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold', color: showReview ? '#0F4C81' : 'white', flexShrink: 0 }}>
+            {steps.length + 1}
+          </div>
+          <span style={{ fontSize: '12px', color: showReview ? 'white' : '#a0c4e8', fontWeight: showReview ? '600' : '400' }}>Review & Complete</span>
+        </div>
       </div>
 
       {/* Main Content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ height: '4px', background: '#e0e4ea' }}>
-          <div style={{ height: '100%', background: '#1d9e75', width: `${((currentStep + 1) / steps.length) * 100}%`, transition: 'width 0.3s' }} />
+          <div style={{ height: '100%', background: '#1d9e75', width: showReview ? '100%' : `${((currentStep + 1) / steps.length) * 100}%`, transition: 'width 0.3s' }} />
         </div>
 
-        <div style={{ padding: '24px 32px 16px', background: 'white', borderBottom: '1px solid #e0e4ea' }}>
-          <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
-            Dashboard → Process Explorer → Plan to Perform → {step.code} {step.name}
+        {showReview ? (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '32px', background: '#f4f6f9' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div>
+                <h1 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '4px' }}>Review Your Responses</h1>
+                <p style={{ color: '#666', fontSize: '14px' }}>Check your answers before completing. Click Edit on any step to make changes.</p>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={handleExportExcel} style={{ padding: '10px 20px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>⬇ Export to Excel</button>
+                <button onClick={() => saveToSupabase(true)} disabled={saving} style={{ padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>{saving ? 'Saving...' : '✓ Complete Assessment'}</button>
+              </div>
+            </div>
+
+            {steps.map((s, si) => (
+              <div key={s.code} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '700', marginBottom: '4px' }}>Step {si + 1}</div>
+                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>{s.code} {s.name}</div>
+                  </div>
+                  <button onClick={() => { setShowReview(false); setCurrentStep(si) }} style={{ padding: '7px 16px', background: '#f4f6f9', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>✏️ Edit Step</button>
+                </div>
+
+                {s.l3s.map(l3 => {
+                  const ans = answers[l3.code]
+                  return (
+                    <div key={l3.code} style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginTop: '12px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#0F4C81', marginBottom: '4px' }}>{l3.code} {l3.name}</div>
+                      <div style={{ fontSize: '13px', color: '#333', marginBottom: '4px' }}>
+                        {ans?.selected?.length > 0 ? ans.selected.join(', ') : <span style={{ color: '#999', fontStyle: 'italic' }}>No response</span>}
+                      </div>
+                      {ans?.painPoint && <div style={{ fontSize: '12px', color: '#888', fontStyle: 'italic' }}>Pain point: {ans.painPoint}</div>}
+                    </div>
+                  )
+                })}
+
+                {toolAnswers[s.code] && (
+                  <div style={{ marginTop: '12px', background: '#f9f9f9', borderRadius: '6px', padding: '10px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#666', marginBottom: '4px' }}>Tool Usage</div>
+                    <div style={{ fontSize: '13px', color: '#333' }}>{toolAnswers[s.code]?.selected?.join(', ') || '-'}</div>
+                    {toolAnswers[s.code]?.tools && <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Tools: {toolAnswers[s.code].tools}</div>}
+                  </div>
+                )}
+
+                {effortData[s.code] && (
+                  <div style={{ marginTop: '12px', background: '#f0f7ff', borderRadius: '6px', padding: '10px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#0F4C81', marginBottom: '4px' }}>👥 Team & Effort</div>
+                    <div style={{ fontSize: '13px', color: '#333' }}>People: {effortData[s.code]?.headcount || '-'} · Hours/cycle: {effortData[s.code]?.hoursPerCycle || '-'}</div>
+                    {effortData[s.code]?.roles?.length > 0 && <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Roles: {effortData[s.code].roles.join(', ')}</div>}
+                    {effortData[s.code]?.comments && <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Comments: {effortData[s.code].comments}</div>}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
+              <button onClick={() => setShowReview(false)} style={{ padding: '10px 20px', background: 'white', color: '#666', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>← Back to Assessment</button>
+              <button onClick={() => saveToSupabase(true)} disabled={saving} style={{ padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>{saving ? 'Saving...' : '✓ Complete Assessment'}</button>
+            </div>
           </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '4px' }}>
-            Step {currentStep + 1} of {steps.length} — {step.name}
-          </h1>
-          <p style={{ color: '#666', fontSize: '14px' }}>{step.description}</p>
-        </div>
+        ) : (
+          <>
+            <div style={{ padding: '24px 32px 16px', background: 'white', borderBottom: '1px solid #e0e4ea' }}>
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
+                Dashboard → Process Explorer → Plan to Perform → {step.code} {step.name}
+              </div>
+              <h1 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '4px' }}>
+                Step {currentStep + 1} of {steps.length} — {step.name}
+              </h1>
+              <p style={{ color: '#666', fontSize: '14px' }}>{step.description}</p>
+            </div>
 
-        <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-            {step.l3s.map(l3 => (
-              <div key={l3.code} style={{ background: 'white', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                <div style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '700', marginBottom: '4px' }}>{l3.code}</div>
-                <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '12px' }}>{l3.name}</div>
-                <div style={{ fontSize: '13px', color: '#444', marginBottom: '12px' }}>{l3.question}</div>
-                {l3.options.map(opt => (
-                  <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={answers[l3.code]?.selected?.includes(opt) || false} onChange={() => toggleOption(l3.code, opt)} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
+            <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                {step.l3s.map(l3 => (
+                  <div key={l3.code} style={{ background: 'white', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                    <div style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '700', marginBottom: '4px' }}>{l3.code}</div>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '12px' }}>{l3.name}</div>
+                    <div style={{ fontSize: '13px', color: '#444', marginBottom: '12px' }}>{l3.question}</div>
+                    {l3.options.map(opt => (
+                      <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={answers[l3.code]?.selected?.includes(opt) || false} onChange={() => toggleOption(l3.code, opt)} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
+                        <span style={{ fontSize: '13px', color: '#333' }}>{opt}</span>
+                      </label>
+                    ))}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={answers[l3.code]?.selected?.includes('Other') || false} onChange={() => toggleOption(l3.code, 'Other')} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
+                      <span style={{ fontSize: '13px', color: '#333' }}>Other</span>
+                    </label>
+                    {answers[l3.code]?.selected?.includes('Other') && (
+                      <input type="text" placeholder="Please specify..." value={answers[l3.code]?.other || ''} onChange={e => updateOther(l3.code, e.target.value)} style={inputStyle} />
+                    )}
+                    <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f0f0f0' }}>
+                      <div style={{ fontSize: '12px', color: '#888', fontStyle: 'italic', marginBottom: '6px' }}>Pain Point: "{l3.painPoint}"</div>
+                      <textarea placeholder="Describe your key challenges here..." value={answers[l3.code]?.painPoint || ''} onChange={e => updatePainPoint(l3.code, e.target.value)} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tool Usage */}
+              <div style={{ background: 'white', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '24px' }}>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Tool Usage — {step.name}</div>
+                <div style={{ fontSize: '13px', color: '#666', marginBottom: '16px' }}>{step.toolQuestion}</div>
+                {step.toolOptions.map(opt => (
+                  <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={toolAnswers[step.code]?.selected?.includes(opt) || false} onChange={() => toggleToolOption(step.code, opt)} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
                     <span style={{ fontSize: '13px', color: '#333' }}>{opt}</span>
                   </label>
                 ))}
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={answers[l3.code]?.selected?.includes('Other') || false} onChange={() => toggleOption(l3.code, 'Other')} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
-                  <span style={{ fontSize: '13px', color: '#333' }}>Other</span>
-                </label>
-                {answers[l3.code]?.selected?.includes('Other') && (
-                  <input type="text" placeholder="Please specify..." value={answers[l3.code]?.other || ''} onChange={e => updateOther(l3.code, e.target.value)} style={inputStyle} />
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ fontSize: '13px', color: '#666', marginBottom: '6px' }}>List the main tools or templates used</div>
+                  <input type="text" placeholder="e.g. Excel, Anaplan, Oracle EPM, SAP BPC, Power BI..." value={toolAnswers[step.code]?.tools || ''} onChange={e => updateTools(step.code, e.target.value)} style={inputStyle} />
+                  <div style={{ fontSize: '11px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>This helps us assess your planning maturity and recommend the right tool overlays.</div>
+                </div>
+
+                {/* Effort Questions */}
+                <div style={{ marginTop: '24px', padding: '20px', background: '#f0f7ff', borderRadius: '10px', border: '1px solid #d0e8ff' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#0F4C81', marginBottom: '16px' }}>👥 Team & Effort</div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>How many people are involved in this step?</div>
+                    <input type="number" min="0" placeholder="e.g. 3" value={effortData[step.code]?.headcount || ''} onChange={e => setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: parseInt(e.target.value) || 0, roles: prev[step.code]?.roles || [], hoursPerCycle: prev[step.code]?.hoursPerCycle || 0, comments: prev[step.code]?.comments || '' } }))} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '120px', color: '#333', background: 'white' }} />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>What roles are involved? (select all that apply)</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      {['CFO / Finance Director', 'Financial Controller', 'FP&A Manager / Analyst', 'Management Accountant', 'Financial Accountant', 'Accounts Payable / Receivable', 'Treasury Analyst', 'Tax Manager', 'Business Partner', 'Operations Manager', 'Department Budget Holder', 'ERP/Systems Administrator', 'IT Manager', 'Data Analyst / BI Developer', 'External Auditor', 'Outsourced Provider'].map(role => (
+                        <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={effortData[step.code]?.roles?.includes(role) || false} onChange={() => {
+                            const current = effortData[step.code]?.roles || []
+                            const updated = current.includes(role) ? current.filter(r => r !== role) : [...current, role]
+                            setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: prev[step.code]?.headcount || 0, roles: updated, hoursPerCycle: prev[step.code]?.hoursPerCycle || 0, comments: prev[step.code]?.comments || '' } }))
+                          }} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
+                          <span style={{ fontSize: '12px', color: '#333' }}>{role}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>How many hours per planning cycle does the team spend on this step?</div>
+                    <input type="number" min="0" placeholder="e.g. 40" value={effortData[step.code]?.hoursPerCycle || ''} onChange={e => setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: prev[step.code]?.headcount || 0, roles: prev[step.code]?.roles || [], hoursPerCycle: parseInt(e.target.value) || 0, comments: prev[step.code]?.comments || '' } }))} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '120px', color: '#333', background: 'white' }} />
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Any additional comments about this step's team or effort?</div>
+                    <textarea placeholder="e.g. This step is shared with the FP&A team during peak periods..." value={effortData[step.code]?.comments || ''} onChange={e => setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: prev[step.code]?.headcount || 0, roles: prev[step.code]?.roles || [], hoursPerCycle: prev[step.code]?.hoursPerCycle || 0, comments: e.target.value } }))} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', minHeight: '80px', resize: 'vertical', color: '#333', background: 'white' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <div style={{ padding: '16px 32px', background: 'white', borderTop: '1px solid #e0e4ea', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button onClick={() => currentStep > 0 ? setCurrentStep(currentStep - 1) : router.push('/process-explorer')} style={{ padding: '10px 20px', background: 'white', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                ← Back
+              </button>
+              <div style={{ fontSize: '13px', color: '#666' }}>{totalAnswered} of {step.l3s.length} answered</div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => saveToSupabase(false)} disabled={saving} style={{ padding: '10px 20px', background: 'white', color: '#666', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
+                  {saving ? 'Saving...' : 'Save Progress'}
+                </button>
+                {currentStep < steps.length - 1 ? (
+                  <button onClick={() => saveToSupabase(false).then(() => setCurrentStep(currentStep + 1))} style={{ padding: '10px 24px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                    Next: {steps[currentStep + 1].name} →
+                  </button>
+                ) : (
+                  <button onClick={() => saveToSupabase(false).then(() => setShowReview(true))} disabled={saving} style={{ padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                    {saving ? 'Saving...' : 'Review & Complete →'}
+                  </button>
                 )}
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f0f0f0' }}>
-                  <div style={{ fontSize: '12px', color: '#888', fontStyle: 'italic', marginBottom: '6px' }}>Pain Point: "{l3.painPoint}"</div>
-                  <textarea placeholder="Describe your key challenges here..." value={answers[l3.code]?.painPoint || ''} onChange={e => updatePainPoint(l3.code, e.target.value)} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ background: 'white', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: '24px' }}>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Tool Usage — {step.name}</div>
-            <div style={{ fontSize: '13px', color: '#666', marginBottom: '16px' }}>{step.toolQuestion}</div>
-            {step.toolOptions.map(opt => (
-              <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={toolAnswers[step.code]?.selected?.includes(opt) || false} onChange={() => toggleToolOption(step.code, opt)} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
-                <span style={{ fontSize: '13px', color: '#333' }}>{opt}</span>
-              </label>
-            ))}
-            <div style={{ marginTop: '12px' }}>
-              <div style={{ fontSize: '13px', color: '#666', marginBottom: '6px' }}>List the main tools or templates used</div>
-              <input type="text" placeholder="e.g. Excel, Anaplan, Oracle EPM, SAP BPC, Power BI..." value={toolAnswers[step.code]?.tools || ''} onChange={e => updateTools(step.code, e.target.value)} style={inputStyle} />
-              <div style={{ fontSize: '11px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>This helps us assess your planning maturity and recommend the right tool overlays.</div>
-            </div>
-            {/* Effort Questions */}
-            <div style={{ marginTop: '24px', padding: '20px', background: '#f0f7ff', borderRadius: '10px', border: '1px solid #d0e8ff' }}>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#0F4C81', marginBottom: '16px' }}>👥 Team & Effort</div>
-              
-              {/* Headcount */}
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>How many people are involved in this step?</div>
-                <input type="number" min="0" placeholder="e.g. 3" value={effortData[step.code]?.headcount || ''} onChange={e => setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: parseInt(e.target.value) || 0, roles: prev[step.code]?.roles || [], hoursPerCycle: prev[step.code]?.hoursPerCycle || 0 } }))} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '120px', color: '#333', background: 'white' }} />
-              </div>
-
-              {/* Roles */}
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>What roles are involved? (select all that apply)</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                  {['CFO / Finance Director', 'Financial Controller', 'FP&A Manager / Analyst', 'Management Accountant', 'Financial Accountant', 'Accounts Payable / Receivable', 'Treasury Analyst', 'Tax Manager', 'Business Partner', 'Operations Manager', 'Department Budget Holder', 'ERP/Systems Administrator', 'IT Manager', 'Data Analyst / BI Developer', 'External Auditor', 'Outsourced Provider'].map(role => (
-                    <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={effortData[step.code]?.roles?.includes(role) || false} onChange={() => {
-                        const current = effortData[step.code]?.roles || []
-                        const updated = current.includes(role) ? current.filter(r => r !== role) : [...current, role]
-                        setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: prev[step.code]?.headcount || 0, roles: updated, hoursPerCycle: prev[step.code]?.hoursPerCycle || 0 } }))
-                      }} style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
-                      <span style={{ fontSize: '12px', color: '#333' }}>{role}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Hours per cycle */}
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>How many hours per planning cycle does the team spend on this step?</div>
-                <input type="number" min="0" placeholder="e.g. 40" value={effortData[step.code]?.hoursPerCycle || ''} onChange={e => setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: prev[step.code]?.headcount || 0, roles: prev[step.code]?.roles || [], hoursPerCycle: parseInt(e.target.value) || 0 } }))} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '120px', color: '#333', background: 'white' }} />
-              </div>
-
-              {/* Additional comments */}
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Any additional comments about this step's team or effort?</div>
-                <textarea placeholder="e.g. This step is shared with the FP&A team during peak periods..." value={effortData[step.code]?.comments || ''} onChange={e => setEffortData(prev => ({ ...prev, [step.code]: { ...prev[step.code], headcount: prev[step.code]?.headcount || 0, roles: prev[step.code]?.roles || [], hoursPerCycle: prev[step.code]?.hoursPerCycle || 0, comments: e.target.value } }))} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', minHeight: '80px', resize: 'vertical', color: '#333', background: 'white' }} />
               </div>
             </div>
-          </div>
-        </div>
-
-        <div style={{ padding: '16px 32px', background: 'white', borderTop: '1px solid #e0e4ea', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button onClick={() => currentStep > 0 ? setCurrentStep(currentStep - 1) : router.push('/process-explorer')} style={{ padding: '10px 20px', background: 'white', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
-            ← Back
-          </button>
-          <div style={{ fontSize: '13px', color: '#666' }}>{totalAnswered} of {step.l3s.length} answered</div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button onClick={() => saveToSupabase(false)} disabled={saving} style={{ padding: '10px 20px', background: 'white', color: '#666', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
-              {saving ? 'Saving...' : 'Save Progress'}
-            </button>
-            {currentStep < steps.length - 1 ? (
-              <button onClick={() => setCurrentStep(currentStep + 1)} style={{ padding: '10px 24px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
-                Next: {steps[currentStep + 1].name} →
-              </button>
-            ) : (
-              <button onClick={() => saveToSupabase(true)} disabled={saving} style={{ padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
-                {saving ? 'Saving...' : 'Complete Assessment →'}
-              </button>
-            )}
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   )
-}export default function AssessmentPageWrapper() {
+}
+
+export default function AssessmentPageWrapper() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <AssessmentPage />
