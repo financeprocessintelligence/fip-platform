@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
@@ -131,9 +131,93 @@ function AssessmentPage() {
   const [effortData, setEffortData] = useState<Record<string, { headcount: number; roles: string[]; hoursPerCycle: number; comments: string }>>({})
   const [showReview, setShowReview] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [loadingResponses, setLoadingResponses] = useState(true)
+
+  useEffect(() => {
+    const loadExisting = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoadingResponses(false); return }
+
+      const { data: assessmentData } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('process_name', 'Plan to Perform')
+
+      if (assessmentData && assessmentData.length > 0) {
+        const loadedAnswers: Answers = {}
+        const loadedToolAnswers: ToolAnswers = {}
+
+        for (const row of assessmentData) {
+          if (row.l3_code === 'TOOL' || !row.l3_code) continue
+          loadedAnswers[row.l3_code] = {
+            selected: row.selected_options || [],
+            other: row.other_text || '',
+            painPoint: row.pain_point || ''
+          }
+        }
+
+        for (const s of steps) {
+          const toolRow = assessmentData.find(r => r.step_code === s.code && r.l3_code?.startsWith(s.code))
+          const anyRow = assessmentData.find(r => r.step_code === s.code)
+          if (anyRow) {
+            loadedToolAnswers[s.code] = {
+              selected: anyRow.tool_options || [],
+              tools: anyRow.tool_names || ''
+            }
+          }
+        }
+
+        setAnswers(loadedAnswers)
+        setToolAnswers(loadedToolAnswers)
+
+        // Find last completed step
+        if (!codeParam) {
+          const answeredSteps = steps.filter(s =>
+            s.l3s.some(l3 => loadedAnswers[l3.code]?.selected?.length > 0)
+          )
+          if (answeredSteps.length > 0) {
+            setCurrentStep(0)
+          }
+        }
+      }
+
+      const { data: effortDbData } = await supabase
+        .from('process_effort')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('process_name', 'Plan to Perform')
+
+      if (effortDbData) {
+        const loadedEffort: Record<string, { headcount: number; roles: string[]; hoursPerCycle: number; comments: string }> = {}
+        for (const row of effortDbData) {
+          if (row.step_code === 'roi_settings') continue
+          loadedEffort[row.step_code] = {
+            headcount: row.headcount || 0,
+            roles: row.roles || [],
+            hoursPerCycle: row.hours_per_cycle || 0,
+            comments: row.comments || ''
+          }
+        }
+        setEffortData(loadedEffort)
+      }
+
+      setLoadingResponses(false)
+    }
+    loadExisting()
+  }, [])
 
   const step = steps[currentStep]
   const totalAnswered = step.l3s.filter(l3 => answers[l3.code]?.selected?.length > 0).length
+
+  if (loadingResponses) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '24px', marginBottom: '12px' }}>⏳</div>
+        <div style={{ fontSize: '16px', color: '#666' }}>Loading your previous responses...</div>
+      </div>
+    </div>
+  )
 
   const saveToSupabase = async (complete: boolean) => {
     setSaving(true)
@@ -460,6 +544,9 @@ function AssessmentPage() {
               </button>
               <div style={{ fontSize: '13px', color: '#666' }}>{totalAnswered} of {step.l3s.length} answered</div>
               <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => saveToSupabase(false).then(() => router.push('/dashboard'))} disabled={saving} style={{ padding: '10px 20px', background: 'white', color: '#666', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
+                  {saving ? 'Saving...' : 'Save & Exit'}
+                </button>
                 <button onClick={() => saveToSupabase(false)} disabled={saving} style={{ padding: '10px 20px', background: 'white', color: '#666', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>
                   {saving ? 'Saving...' : 'Save Progress'}
                 </button>

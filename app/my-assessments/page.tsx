@@ -188,8 +188,8 @@ export default function MyAssessmentsPage() {
                             View Results →
                           </button>
                         ) : null}
-                        <button onClick={() => router.push('/assessment')} style={{ padding: '10px 20px', background: 'white', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                          {p.status === 'in-progress' ? 'Continue →' : 'Retake'}
+                        <button onClick={() => router.push(p.processName === 'Record to Report' ? '/assessment-r2r' : '/assessment')} style={{ padding: '10px 20px', background: 'white', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                          {p.status === 'not-started' ? 'Start →' : p.status === 'in-progress' ? 'Continue →' : 'Continue →'}
                         </button>
                       </div>
                     </div>
