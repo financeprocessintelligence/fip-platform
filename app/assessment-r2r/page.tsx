@@ -184,6 +184,7 @@ export default function AssessmentR2RPage() {
   const [toolAnswers, setToolAnswers] = useState<ToolAnswers>({})
   const [effortData, setEffortData] = useState<Record<string, { headcount: number; roles: string[]; hoursPerCycle: number; comments: string }>>({})
   const [saving, setSaving] = useState(false)
+  const [showReview, setShowReview] = useState(false)
   const [loadingResponses, setLoadingResponses] = useState(true)
 
   useEffect(() => {
@@ -356,7 +357,47 @@ export default function AssessmentR2RPage() {
     setSaving(false)
     if (complete) router.push('/results-r2r')
   }
+const handleExportExcel = () => {
+    const responseRows: string[][] = [['Step Code', 'Step Name', 'L3 Code', 'L3 Name', 'Selected Options', 'Other', 'Pain Point', 'Score']]
+    for (const s of steps) {
+      for (const l3 of s.l3s) {
+        const ans = answers[l3.code]
+        let score = 0
+        if (ans?.selected?.length > 0) {
+          const maxScore = Math.max(...(ans.selected.filter(o => o !== 'Other').map(o => {
+            const idx = l3.options.indexOf(o)
+            if (idx === -1) return 1
+            return Math.max(1, 5 - idx)
+          })))
+          score = maxScore
+        }
+        responseRows.push([s.code, s.name, l3.code, l3.name, (ans?.selected || []).join('; '), ans?.other || '', ans?.painPoint || '', score.toString()])
+      }
+      const toolAns = toolAnswers[s.code]
+      if (toolAns) {
+        responseRows.push([s.code, s.name, 'TOOL', 'Tool Usage', (toolAns.selected || []).join('; '), toolAns.tools || '', '', ''])
+      }
+    }
 
+    const effortRows: string[][] = [['Step Code', 'Step Name', 'Headcount', 'Hours/Cycle', 'Roles', 'Comments']]
+    for (const s of steps) {
+      const e = effortData[s.code]
+      if (e) {
+        effortRows.push([s.code, s.name, (e.headcount || 0).toString(), (e.hoursPerCycle || 0).toString(), (e.roles || []).join('; '), e.comments || ''])
+      }
+    }
+
+    const toCSV = (rows: string[][]) => rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')
+    const sheet1 = 'RESPONSES\n' + toCSV(responseRows)
+    const sheet2 = '\n\nEFFORT & ROI\n' + toCSV(effortRows)
+    const blob = new Blob([sheet1 + sheet2], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'record-to-report-responses.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
   const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '13px', color: '#1a1a2e', background: 'white', marginTop: '6px' }
 
   return (
@@ -370,22 +411,90 @@ export default function AssessmentR2RPage() {
         <p style={{ fontSize: '11px', color: '#a0c4e8', marginBottom: '32px', marginLeft: '46px' }}>Intelligence Platform</p>
         <p style={{ fontSize: '11px', color: '#a0c4e8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Record to Report</p>
         {steps.map((s, i) => (
-          <div key={s.code} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', opacity: i === currentStep ? 1 : 0.5 }}>
-            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: i < currentStep ? '#1d9e75' : i === currentStep ? 'white' : 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold', color: i === currentStep ? '#0F4C81' : 'white', flexShrink: 0 }}>
-              {i < currentStep ? '✓' : i + 1}
+          <div key={s.code} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', opacity: i === currentStep && !showReview ? 1 : 0.5 }}>
+            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: i < currentStep || showReview ? '#1d9e75' : i === currentStep ? 'white' : 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold', color: i === currentStep && !showReview ? '#0F4C81' : 'white', flexShrink: 0 }}>
+              {i < currentStep || showReview ? '✓' : i + 1}
             </div>
-            <span style={{ fontSize: '11px', color: i === currentStep ? 'white' : '#a0c4e8', fontWeight: i === currentStep ? '600' : '400' }}>{s.name}</span>
+            <span style={{ fontSize: '11px', color: i === currentStep && !showReview ? 'white' : '#a0c4e8', fontWeight: i === currentStep && !showReview ? '600' : '400' }}>{s.name}</span>
           </div>
         ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', opacity: showReview ? 1 : 0.5 }}>
+          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: showReview ? 'white' : 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold', color: showReview ? '#0F4C81' : 'white', flexShrink: 0 }}>
+            {steps.length + 1}
+          </div>
+          <span style={{ fontSize: '11px', color: showReview ? 'white' : '#a0c4e8', fontWeight: showReview ? '600' : '400' }}>Review & Complete</span>
+        </div>
       </div>
 
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ height: '4px', background: '#e0e4ea' }}>
-          <div style={{ height: '100%', background: '#1d9e75', width: `${((currentStep + 1) / steps.length) * 100}%`, transition: 'width 0.3s' }} />
+          <div style={{ height: '100%', background: '#1d9e75', width: showReview ? '100%' : `${((currentStep + 1) / steps.length) * 100}%`, transition: 'width 0.3s' }} />
         </div>
 
-        <div style={{ padding: '24px 32px 16px', background: 'white', borderBottom: '1px solid #e0e4ea' }}>
+        {showReview ? (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '32px', background: '#f4f6f9' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div>
+                <h1 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '4px' }}>Review Your Responses</h1>
+                <p style={{ color: '#666', fontSize: '14px' }}>Check your answers before completing. Click Edit on any step to make changes.</p>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={handleExportExcel} style={{ padding: '10px 20px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>⬇ Export to Excel</button>
+                <button onClick={() => saveToSupabase(true)} disabled={saving} style={{ padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>{saving ? 'Saving...' : '✓ Complete Assessment'}</button>
+              </div>
+            </div>
+
+            {steps.map((s, si) => (
+              <div key={s.code} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '700', marginBottom: '4px' }}>Step {si + 1}</div>
+                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>{s.code} {s.name}</div>
+                  </div>
+                  <button onClick={() => { setShowReview(false); setCurrentStep(si) }} style={{ padding: '7px 16px', background: '#f4f6f9', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>✏️ Edit Step</button>
+                </div>
+
+                {s.l3s.map(l3 => {
+                  const ans = answers[l3.code]
+                  return (
+                    <div key={l3.code} style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginTop: '12px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#0F4C81', marginBottom: '4px' }}>{l3.code} {l3.name}</div>
+                      <div style={{ fontSize: '13px', color: '#333', marginBottom: '4px' }}>
+                        {ans?.selected?.length > 0 ? ans.selected.join(', ') : <span style={{ color: '#999', fontStyle: 'italic' }}>No response</span>}
+                      </div>
+                      {ans?.painPoint && <div style={{ fontSize: '12px', color: '#888', fontStyle: 'italic' }}>Pain point: {ans.painPoint}</div>}
+                    </div>
+                  )
+                })}
+
+                {toolAnswers[s.code] && (
+                  <div style={{ marginTop: '12px', background: '#f9f9f9', borderRadius: '6px', padding: '10px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#666', marginBottom: '4px' }}>Tool Usage</div>
+                    <div style={{ fontSize: '13px', color: '#333' }}>{toolAnswers[s.code]?.selected?.join(', ') || '-'}</div>
+                    {toolAnswers[s.code]?.tools && <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Tools: {toolAnswers[s.code].tools}</div>}
+                  </div>
+                )}
+
+                {effortData[s.code] && (
+                  <div style={{ marginTop: '12px', background: '#f0f7ff', borderRadius: '6px', padding: '10px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#0F4C81', marginBottom: '4px' }}>👥 Team & Effort</div>
+                    <div style={{ fontSize: '13px', color: '#333' }}>People: {effortData[s.code]?.headcount || '-'} · Hours/cycle: {effortData[s.code]?.hoursPerCycle || '-'}</div>
+                    {effortData[s.code]?.roles?.length > 0 && <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Roles: {effortData[s.code].roles.join(', ')}</div>}
+                    {effortData[s.code]?.comments && <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Comments: {effortData[s.code].comments}</div>}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
+              <button onClick={() => setShowReview(false)} style={{ padding: '10px 20px', background: 'white', color: '#666', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}>← Back to Assessment</button>
+              <button onClick={() => saveToSupabase(true)} disabled={saving} style={{ padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>{saving ? 'Saving...' : '✓ Complete Assessment'}</button>
+            </div>
+          </div>
+        ) : (
+          <>
+          <div style={{ padding: '24px 32px 16px', background: 'white', borderBottom: '1px solid #e0e4ea' }}>
           <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
             Dashboard → Process Explorer → Record to Report → {step.code} {step.name}
           </div>
@@ -493,12 +602,14 @@ export default function AssessmentR2RPage() {
                 Next: {steps[currentStep + 1].name} →
               </button>
             ) : (
-              <button onClick={() => saveToSupabase(true)} disabled={saving} style={{ padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
-                {saving ? 'Saving...' : 'Complete Assessment →'}
+              <button onClick={() => saveToSupabase(false).then(() => setShowReview(true))} disabled={saving} style={{ padding: '10px 24px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                {saving ? 'Saving...' : 'Review & Complete →'}
               </button>
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   )
