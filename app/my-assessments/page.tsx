@@ -48,6 +48,8 @@ export default function MyAssessmentsPage() {
   const router = useRouter()
   const [processSummaries, setProcessSummaries] = useState<ProcessSummary[]>([])
   const [loading, setLoading] = useState(true)
+const [p2pResponses, setP2pResponses] = useState<Record<string, any>>({})
+const [p2pEffort, setP2pEffort] = useState<Record<string, any>>({})
 
   useEffect(() => {
     const fetchAssessments = async () => {
@@ -61,6 +63,32 @@ export default function MyAssessmentsPage() {
         .order('updated_at', { ascending: false })
 
       if (error || !data) { setLoading(false); return }
+
+// Fetch full P2P responses
+const { data: responseData } = await supabase
+  .from('assessments')
+  .select('l3_code, selected_options, pain_point, score, tool_options, tool_names, other_text')
+  .eq('user_id', user.id)
+  .eq('process_name', 'Plan to Perform')
+
+const responseMap: Record<string, any> = {}
+if (responseData) {
+  responseData.forEach(r => { responseMap[r.l3_code] = r })
+}
+setP2pResponses(responseMap)
+
+// Fetch P2P effort data
+const { data: p2pEffortData } = await supabase
+  .from('process_effort')
+  .select('step_code, headcount, roles, hours_per_cycle, hourly_rate, saving_percent, comments')
+  .eq('user_id', user.id)
+  .eq('process_name', 'Plan to Perform')
+
+const p2pEffortMap: Record<string, any> = {}
+if (p2pEffortData) {
+  p2pEffortData.forEach(r => { p2pEffortMap[r.step_code] = r })
+}
+setP2pEffort(p2pEffortMap)
 
       const rows = data as Assessment[]
 
@@ -168,10 +196,25 @@ const p2pSteps = [
     const rows: string[][] = [['Step Code', 'Step Name', 'L3 Code', 'L3 Name', 'Available Options', 'Selected Options (semicolon separated)', 'Pain Point', 'Score (1-5)', 'Type']]
     for (const s of p2pSteps) {
       for (const l3 of s.l3s) {
-        rows.push([s.code, s.name, l3.code, l3.name, l3.options.join('; '), '', '', '', 'L3'])
+        const r = p2pResponses[l3.code] || {}
+        const selected = (r.selected_options || []).join('; ')
+        const painPoint = r.pain_point || ''
+        const score = r.score != null ? String(r.score) : ''
+        rows.push([s.code, s.name, l3.code, l3.name, l3.options.join('; '), selected, painPoint, score, 'L3'])
       }
-      rows.push([s.code, s.name, 'TOOL', 'Tool Usage', s.toolOptions.join('; '), '', '', '', 'TOOL'])
-      rows.push([s.code, s.name, 'EFFORT', 'Team & Effort', 'Headcount | Hours per cycle | Roles (semicolon sep) | Comments', '', '', '', 'EFFORT'])
+      const firstL3Code = s.l3s[0]?.code
+      const firstL3R = firstL3Code ? (p2pResponses[firstL3Code] || {}) : {}
+      const toolSelected = (firstL3R.tool_options || []).join('; ')
+      rows.push([s.code, s.name, 'TOOL', 'Tool Usage', s.toolOptions.join('; '), toolSelected, '', '', 'TOOL'])
+      const eff = p2pEffort[s.code] || {}
+      const effortVal = [
+        eff.headcount || '',
+        eff.hours_per_cycle || '',
+        (eff.roles || ''),
+        eff.comments || ''
+      ].join(' | ')
+      const effortRoles = 'CFO / Finance Director; Financial Controller; FP&A Manager / Analyst; Management Accountant; Financial Accountant; Accounts Payable / Receivable; Treasury Analyst; Tax Manager; Business Partner; Operations Manager; Department Budget Holder; ERP/Systems Administrator; IT Manager; Data Analyst / BI Developer; External Auditor; Outsourced Provider'
+rows.push([s.code, s.name, 'EFFORT', 'Team & Effort', `Headcount | Hours per cycle | Roles (from: ${effortRoles}) | Comments`, effortVal, '', '', 'EFFORT'])
     }
     const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -196,23 +239,58 @@ const p2pSteps = [
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    
     for (const row of rows) {
-      const [stepCode, , l3Code, , selectedRaw, painPoint, scoreRaw] = row
+      const [stepCode, , l3Code, , availableRaw, selectedRaw, painPoint, scoreRaw, type] = row
+const rowType = type || painPoint // TOOL/EFFORT rows only have 7 cols, type lands at index 6
       if (!l3Code || l3Code === 'L3 Code') continue
-      const selected = selectedRaw ? selectedRaw.split(';').map(s => s.trim()).filter(Boolean) : []
-      const score = parseFloat(scoreRaw) || null
-      await supabase.from('assessments').upsert({
-        user_id: user.id,
-        process_name: processName,
-        step_code: stepCode,
-        l3_code: l3Code,
-        selected_options: selected,
-        pain_point: painPoint || '',
-        score: score,
-        other_text: '',
-        tool_options: [],
-        tool_names: ''
-      }, { onConflict: 'user_id,l3_code' })
+
+      if (rowType === 'TOOL') {
+        const toolOptions = selectedRaw ? selectedRaw.split(';').map(s => s.trim()).filter(Boolean) : []
+        await supabase.from('assessments').upsert({
+          user_id: user.id,
+          process_name: processName,
+          step_code: stepCode,
+          l3_code: 'TOOL_' + stepCode,
+          selected_options: [],
+          pain_point: '',
+          score: null,
+          other_text: '',
+          tool_options: toolOptions,
+          tool_names: ''
+        }, { onConflict: 'user_id,l3_code' })
+      } else if (rowType === 'EFFORT') {
+        const effortParts = (selectedRaw || '').split('|').map(s => s.trim())
+        const headcount = parseInt(effortParts[0]) || 0
+        const hoursPerCycle = parseInt(effortParts[1]) || 0
+        const roles = effortParts[2] ? effortParts[2].split(';').map(r => r.trim()).filter(Boolean) : []
+        const comments = effortParts[3] || ''
+        await supabase.from('process_effort').upsert({
+          user_id: user.id,
+          process_name: processName,
+          step_code: stepCode,
+          step_name: row[1],
+          headcount,
+          hours_per_cycle: hoursPerCycle,
+          roles,
+          comments
+        }, { onConflict: 'user_id,process_name,step_code' })
+      } else {
+        const selected = selectedRaw ? selectedRaw.split(';').map(s => s.trim()).filter(Boolean) : []
+        const score = parseFloat(scoreRaw) || null
+        await supabase.from('assessments').upsert({
+          user_id: user.id,
+          process_name: processName,
+          step_code: stepCode,
+          l3_code: l3Code,
+          selected_options: selected,
+          pain_point: painPoint || '',
+          score: score,
+          other_text: '',
+          tool_options: [],
+          tool_names: ''
+        }, { onConflict: 'user_id,l3_code' })
+      }
     }
 
     alert('Import complete! Go to the assessment to review your responses.')
