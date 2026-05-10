@@ -101,7 +101,123 @@ export default function MyAssessmentsPage() {
 
     fetchAssessments()
   }, [router])
+const p2pSteps = [
+    { code: '1.1', name: 'Develop Top-down Plan', toolQuestion: 'How are strategic planning and target-setting managed in your organisation?', toolOptions: ['Mostly in Excel or offline', 'Mostly in a dedicated system or platform', 'A mix of Excel and platform tools', 'Not formally structured'], l3s: [
+      { code: '1.1.1', name: 'Perform Strategic Analysis', options: ['Internal workshops', 'Market research & analyst insights', 'External consultants', 'Formal structured methodology (PESTLE/SWOT)', 'Not formally done'] },
+      { code: '1.1.2', name: 'Articulate Stakeholder Expectations', options: ['Leadership alignment sessions', 'Formal strategy committee', 'Surveys and structured interviews', 'Ad-hoc conversations', 'Not systematic'] },
+      { code: '1.1.3', name: 'Develop Strategic Objectives & KPIs', options: ['Finance-led with Balanced Scorecard', 'Strategy team owned', 'Decentralised by BU', 'Informally agreed', 'Not well defined'] },
+      { code: '1.1.4', name: 'Develop What-If Scenarios', options: ['Structured scenarios with defined assumptions', 'Ad-hoc sensitivity analysis in Excel', 'Limited to best/worst case only', 'AI/ML driven scenario modelling', 'Not performed'] },
+      { code: '1.1.5', name: 'Derive Top-down Targets', options: ['Board/Exec set targets centrally', 'Finance models drive the targets', 'Negotiated with BUs', 'Market benchmarks used', 'No formal top-down process'] },
+      { code: '1.1.6', name: 'Run Simulations & Finalise Plan', options: ['Automated via planning platform', 'Manual Excel-based iterations', 'Finance team runs centrally', 'BU-driven with Finance review', 'No formal simulation process'] },
+    ]},
+    { code: '1.2', name: 'Cascade the Plan', toolQuestion: 'How is plan cascading and divisional planning managed?', toolOptions: ['EPM/Planning platform', 'Excel-based', 'Mix of systems', 'Manual/offline process'], l3s: [
+      { code: '1.2.1', name: 'Translate Top-down Plan to Divisional Plan', options: ['Automated allocation via EPM tool', 'Finance manually distributes targets', 'BUs self-allocate with guidelines', 'Negotiated process', 'No formal translation'] },
+      { code: '1.2.2', name: 'Define Planning Drivers and Assumptions', options: ['Centralised assumption library', 'Finance sets key drivers', 'Each BU sets their own', 'Mix of central and local', 'No formal process'] },
+      { code: '1.2.3', name: 'Establish Accountability & Review Mechanisms', options: ['Formal ownership framework with sign-off', 'Manager-level ownership', 'Finance owns accountability', 'Informal agreements', 'Not established'] },
+      { code: '1.2.4', name: 'Communicate Strategic Targets & Guidelines', options: ['Formal planning pack distributed', 'Finance roadshows and workshops', 'Email/SharePoint communication', 'Verbal briefings only', 'Not formally communicated'] },
+      { code: '1.2.5', name: 'Monitor Initial Plan Submissions & Feedback', options: ['Automated tracking via EPM', 'Finance manually tracks submissions', 'Structured review meetings', 'Ad-hoc follow-up', 'No formal monitoring'] },
+    ]},
+    { code: '1.3', name: 'Develop Bottom-up Budget', toolQuestion: 'What tools support your bottom-up budgeting process?', toolOptions: ['EPM/Budgeting platform', 'Excel-based', 'ERP-integrated', 'Mix of tools'], l3s: [
+      { code: '1.3.1', name: 'Develop Revenue Plan', options: ['Driver-based modelling', 'Sales team bottom-up input', 'Market share analysis', 'Historical trend extrapolation', 'Finance-led estimate'] },
+      { code: '1.3.2', name: 'Develop Direct Cost Plan', options: ['Activity-based costing', 'Linked to revenue drivers', 'Historical run-rate + adjustments', 'BU-led with Finance review', 'No formal methodology'] },
+      { code: '1.3.3', name: 'Develop Workforce Plan', options: ['Integrated with HR systems', 'Finance and HR co-own', 'FTE-based modelling', 'Cost rate x headcount', 'Not formally planned'] },
+      { code: '1.3.4', name: 'Develop Capex and Project Plan', options: ['Project-by-project business cases', 'Portfolio-level planning', 'Finance-led allocation', 'BU-submitted with Finance approval', 'No formal Capex planning'] },
+      { code: '1.3.5', name: 'Develop Operating Expense (Opex) Plan', options: ['Zero-based budgeting', 'Incremental from prior year', 'Driver-based', 'BU-owned with guidelines', 'No formal methodology'] },
+      { code: '1.3.6', name: 'Consolidate Bottom-up Budget', options: ['Automated via EPM tool', 'Finance manually consolidates', 'Phased review and challenge', 'Simple aggregation', 'No formal consolidation'] },
+      { code: '1.3.7', name: 'Perform Gap Analysis vs Top-down Targets', options: ['Structured gap analysis and challenge', 'Finance-led negotiation', 'BU resubmission process', 'Senior management arbitration', 'Gaps are accepted without resolution'] },
+      { code: '1.3.8', name: 'Final Budget Review and Sign-off', options: ['Board/Exec formal sign-off', 'CFO approval process', 'Finance committee review', 'Informal management approval', 'No formal sign-off'] },
+    ]},
+    { code: '1.4', name: 'Refresh Rolling Forecasts', toolQuestion: 'What tools support your rolling forecast process?', toolOptions: ['EPM/Forecasting platform', 'Excel-based', 'BI tool integrated', 'Mix of tools'], l3s: [
+      { code: '1.4.1', name: 'Seed Forecast', options: ['Automated from actuals', 'Prior forecast adjusted', 'Manual data entry', 'Driver-based seeding', 'No formal seeding'] },
+      { code: '1.4.2', name: 'Refresh Revenue Forecast', options: ['Sales pipeline driven', 'Driver-based model', 'Management judgement', 'Historical trend', 'Minimal refresh done'] },
+      { code: '1.4.3', name: 'Refresh Direct Cost', options: ['Linked to revenue forecast', 'Activity-based refresh', 'Manual BU input', 'Run-rate adjustment', 'Rarely refreshed'] },
+      { code: '1.4.4', name: 'Refresh Workforce Forecast', options: ['HR system integrated', 'Finance and HR joint update', 'Headcount tracker', 'Manual update', 'Not regularly refreshed'] },
+      { code: '1.4.5', name: 'Refresh Project & Capex', options: ['Project management system linked', 'PMO provides updates', 'Finance manually tracks', 'Quarterly review only', 'Rarely updated'] },
+      { code: '1.4.6', name: 'Refresh Opex Forecast', options: ['Run-rate + known changes', 'BU-led refresh', 'Finance-driven', 'Annual only', 'Not formally refreshed'] },
+      { code: '1.4.7', name: 'Consolidate Forecasts Across Functions', options: ['Automated via EPM', 'Finance manually aggregates', 'Phased submission process', 'Single owner consolidates', 'No formal consolidation'] },
+      { code: '1.4.8', name: 'Perform Scenario Testing', options: ['Automated scenario modelling', 'Manual what-if in Excel', 'Predefined scenario templates', 'Senior management driven', 'Not performed'] },
+    ]},
+    { code: '1.5', name: 'Report Results', toolQuestion: 'What tools support your performance reporting?', toolOptions: ['BI/Analytics platform (Power BI, Tableau etc.)', 'EPM reporting module', 'Excel-based', 'ERP standard reports'], l3s: [
+      { code: '1.5.1', name: 'Process Management Allocations', options: ['Automated allocation rules in the system', 'Finance manually applies allocations each period', 'Shared service centre driven allocations', 'Driver-based allocation methodology', 'Allocations not formally managed'] },
+      { code: '1.5.2', name: 'Run Variance Analytics', options: ['Automated variance reporting', 'Finance-led manual analysis', 'BU-led self-service', 'Exception-based reporting', 'Minimal variance analysis'] },
+      { code: '1.5.3', name: 'Define Reporting Frequency', options: ['Board/Exec driven cadence', 'Monthly standard pack', 'Weekly operational reports', 'On-demand self-service', 'No defined cadence'] },
+      { code: '1.5.4', name: 'Standardise Management Reporting', options: ['Single standard report pack', 'Mostly standardised with some variation', 'BU-specific reports', 'Highly customised per stakeholder', 'No standardisation'] },
+    ]},
+    { code: '1.6', name: 'Take Corrective Actions', toolQuestion: 'What tools support your corrective action tracking?', toolOptions: ['Integrated performance management tool', 'Project management tool', 'Excel tracker', 'No formal tool'], l3s: [
+      { code: '1.6.1', name: 'Identify Root Causes for Performance Gaps', options: ['Structured root cause analysis', 'Finance-led investigation', 'BU self-assessment', 'Management judgement', 'Not formally identified'] },
+      { code: '1.6.2', name: 'Define and Document Corrective Action Plans', options: ['Formal action log with owners', 'Finance tracks actions', 'BU-owned action plans', 'Verbal commitments only', 'Not formally documented'] },
+      { code: '1.6.3', name: 'Assign Actions to Owners & Deadlines', options: ['Formal ownership framework', 'CFO/Finance assigns', 'Management self-assign', 'Informal agreements', 'No formal assignment'] },
+      { code: '1.6.4', name: 'Track and Monitor Corrective Action Progress', options: ['Automated tracking system', 'Finance reviews monthly', 'Action log reviewed in meetings', 'Ad-hoc follow-up', 'Not tracked'] },
+      { code: '1.6.5', name: 'Reforecast Based on Corrective Measures', options: ['Immediate forecast update', 'Next cycle refresh', 'Management overlay applied', 'Rarely reflected', 'Not incorporated'] },
+      { code: '1.6.6', name: 'Evaluate Effectiveness & Close Loop', options: ['Formal post-action review', 'Variance tracking over time', 'Management sign-off', 'Informal assessment', 'Not evaluated'] },
+    ]},
+    { code: '1.7', name: 'Govern the Process', toolQuestion: 'What governance tools and frameworks support your FP&A process?', toolOptions: ['Integrated GRC platform', 'EPM governance module', 'SharePoint/intranet', 'Manual/Excel-based'], l3s: [
+      { code: '1.7.1', name: 'Manage FP&A Planning & Reporting Calendar', options: ['Centralised calendar with automated reminders', 'Finance owns and distributes', 'Shared across Finance and BUs', 'Informal timing', 'No formal calendar'] },
+      { code: '1.7.2', name: 'Manage Policies, Standards & Templates', options: ['Central repository with version control', 'Finance maintains and distributes', 'SharePoint/intranet based', 'Ad-hoc per cycle', 'No formal management'] },
+      { code: '1.7.3', name: 'Manage Data & Master Data', options: ['Centralised MDM solution', 'Finance owns master data', 'IT manages with Finance input', 'Multiple sources managed separately', 'No formal MDM'] },
+      { code: '1.7.4', name: 'Manage Planning & Reporting Systems (EPM)', options: ['Dedicated EPM platform centrally managed', 'Finance owns system configuration', 'IT managed with Finance input', 'Excel-based with some tools', 'No formal system management'] },
+      { code: '1.7.5', name: 'Manage Internal Controls', options: ['Formal control framework', 'Audit-driven controls', 'Finance self-assurance', 'Informal checks', 'No formal controls'] },
+      { code: '1.7.6', name: 'Process Automation & Digital Tools', options: ['Fully automated end-to-end', 'Partially automated key tasks', 'RPA/macros for repetitive tasks', 'Manual with some tools', 'Largely manual'] },
+      { code: '1.7.7', name: 'Govern AI', options: ['Formal AI governance framework', 'AI use cases piloted with oversight', 'Exploring AI opportunities', 'Limited AI awareness', 'No AI governance'] },
+      { code: '1.7.8', name: 'Ensure FP&A Team Capability Development', options: ['Structured L&D programme', 'On-the-job learning', 'External training/qualifications', 'Ad-hoc training', 'No formal development'] },
+      { code: '1.7.9', name: 'Archive & Maintain Records', options: ['Automated archiving system', 'SharePoint/document management', 'Finance manually archives', 'Email-based', 'No formal archiving'] },
+    ]},
+  ]
 
+  const handleDownloadTemplate = () => {
+    const rows: string[][] = [['Step Code', 'Step Name', 'L3 Code', 'L3 Name', 'Available Options', 'Selected Options (semicolon separated)', 'Pain Point', 'Score (1-5)', 'Type']]
+    for (const s of p2pSteps) {
+      for (const l3 of s.l3s) {
+        rows.push([s.code, s.name, l3.code, l3.name, l3.options.join('; '), '', '', '', 'L3'])
+      }
+      rows.push([s.code, s.name, 'TOOL', 'Tool Usage', s.toolOptions.join('; '), '', '', '', 'TOOL'])
+      rows.push([s.code, s.name, 'EFFORT', 'Team & Effort', 'Headcount | Hours per cycle | Roles (semicolon sep) | Comments', '', '', '', 'EFFORT'])
+    }
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'plan-to-perform-template.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>, processName: string) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const text = await file.text()
+    const lines = text.split('\n').filter(l => l.trim())
+    const rows = lines.slice(1).map(line => {
+      const cols = line.match(/(".*?"|[^,]+)(?=,|$)/g)?.map(c => c.replace(/^"|"$/g, '').trim()) || []
+      return cols
+    })
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    for (const row of rows) {
+      const [stepCode, , l3Code, , selectedRaw, painPoint, scoreRaw] = row
+      if (!l3Code || l3Code === 'L3 Code') continue
+      const selected = selectedRaw ? selectedRaw.split(';').map(s => s.trim()).filter(Boolean) : []
+      const score = parseFloat(scoreRaw) || null
+      await supabase.from('assessments').upsert({
+        user_id: user.id,
+        process_name: processName,
+        step_code: stepCode,
+        l3_code: l3Code,
+        selected_options: selected,
+        pain_point: painPoint || '',
+        score: score,
+        other_text: '',
+        tool_options: [],
+        tool_names: ''
+      }, { onConflict: 'user_id,l3_code' })
+    }
+
+    alert('Import complete! Go to the assessment to review your responses.')
+    window.location.reload()
+  }
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -188,6 +304,15 @@ export default function MyAssessmentsPage() {
                             View Results →
                           </button>
                         ) : null}
+                        {p.processName === 'Plan to Perform' && (
+                          <>
+                            <button onClick={() => handleDownloadTemplate()} style={{ padding: '10px 20px', background: 'white', color: '#1d9e75', border: '1px solid #1d9e75', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Template</button>
+                            <label style={{ padding: '10px 20px', background: 'white', color: '#1d9e75', border: '1px solid #1d9e75', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                              ⬆ Import
+                              <input type="file" accept=".csv" onChange={e => handleImportCSV(e, p.processName)} style={{ display: 'none' }} />
+                            </label>
+                          </>
+                        )}
                         <button onClick={() => router.push(p.processName === 'Record to Report' ? '/assessment-r2r' : '/assessment')} style={{ padding: '10px 20px', background: 'white', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                           {p.status === 'not-started' ? 'Start →' : p.status === 'in-progress' ? 'Continue →' : 'Continue →'}
                         </button>
