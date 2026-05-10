@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     const message = await client.messages.create({
       model: 'claude-opus-4-5',
-      max_tokens: 4096,
+      max_tokens: 16000,
       messages: [{
         role: 'user',
         content: `Finance process maturity scores for ${processName}:\n${scoresText}${effortText}\n\nWhen generating recommendations, factor in the effort data above. Reference specific hours, costs and team sizes where relevant. Mention potential hour savings or cost reductions based on the hourly rate provided.\n\nRespond with only valid JSON matching this exact structure (fill in all values based on the scores above):\n\n{"l2Narratives":${l2NarrativesTemplate},"strengths":"text","strengthQuote":"text","gaps":"text","gapQuote":"text","opportunity":"text","keyFindings":[{"type":"strength","text":"text"},{"type":"strength","text":"text"},{"type":"gap","text":"text"},{"type":"gap","text":"text"},{"type":"opportunity","text":"text"},{"type":"opportunity","text":"text"}],"recommendations":[{"priority":"1","action":"text","detail":"text","impact":"High","effort":"Low","timeline":"1 Quarter","owner":"text","l2":"${sorted[0]?.code}"},{"priority":"2","action":"text","detail":"text","impact":"High","effort":"Medium","timeline":"2 Quarters","owner":"text","l2":"${sorted[1]?.code}"},{"priority":"3","action":"text","detail":"text","impact":"High","effort":"Medium","timeline":"2 Quarters","owner":"text","l2":"${sorted[2]?.code}"},{"priority":"4","action":"text","detail":"text","impact":"Medium","effort":"Medium","timeline":"3 Quarters","owner":"text","l2":"${sorted[3]?.code}"},{"priority":"5","action":"text","detail":"text","impact":"Medium","effort":"Low","timeline":"1 Quarter","owner":"text","l2":"${sorted[4]?.code}"}]}`
