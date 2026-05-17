@@ -438,7 +438,21 @@ rows.push([s.code, s.name, 'EFFORT', 'Team & Effort', `Headcount | Hours per cyc
     const text = await file.text()
     const lines = text.split('\n').filter(l => l.trim())
     const rows = lines.slice(1).map(line => {
-      const cols = line.match(/(".*?"|[^,]+)(?=,|$)/g)?.map(c => c.replace(/^"|"$/g, '').trim()) || []
+      const cols: string[] = []
+let current = ''
+let inQuotes = false
+for (let i = 0; i < line.length; i++) {
+  const char = line[i]
+  if (char === '"') {
+    inQuotes = !inQuotes
+  } else if (char === ',' && !inQuotes) {
+    cols.push(current.trim())
+    current = ''
+  } else {
+    current += char
+  }
+}
+cols.push(current.trim())
       return cols
     })
 
@@ -446,9 +460,14 @@ rows.push([s.code, s.name, 'EFFORT', 'Team & Effort', `Headcount | Hours per cyc
     if (!user) return
 
     
+    let currentStepCode = ''
     for (const row of rows) {
-      const [stepCode, , l3Code, , availableRaw, selectedRaw, painPoint, scoreRaw, type] = row
-const rowType = type || painPoint // TOOL/EFFORT rows only have 7 cols, type lands at index 6
+      const [, , l3Code, , availableRaw, selectedRaw, painPoint, scoreRaw, type] = row
+const rowType = type || painPoint
+// Derive step code from l3Code to avoid Excel corrupting 1.10 -> 1.1
+const isToolOrEffort = rowType === 'TOOL' || rowType === 'EFFORT'
+const stepCode = isToolOrEffort ? currentStepCode : l3Code.split('.').slice(0, 2).join('.')
+if (!isToolOrEffort) currentStepCode = stepCode
       if (!l3Code || l3Code === 'L3 Code') continue
 
       if (rowType === 'TOOL') {
@@ -471,7 +490,7 @@ const rowType = type || painPoint // TOOL/EFFORT rows only have 7 cols, type lan
         const hoursPerCycle = parseInt(effortParts[1]) || 0
         const roles = effortParts[2] ? effortParts[2].split(';').map(r => r.trim()).filter(Boolean) : []
         const comments = effortParts[3] || ''
-        await supabase.from('process_effort').upsert({
+        const { error: effortError } = await supabase.from('process_effort').upsert({
           user_id: user.id,
           process_name: processName,
           step_code: stepCode,
