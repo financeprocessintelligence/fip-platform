@@ -50,6 +50,8 @@ export default function MyAssessmentsPage() {
   const [loading, setLoading] = useState(true)
 const [p2pResponses, setP2pResponses] = useState<Record<string, any>>({})
 const [p2pEffort, setP2pEffort] = useState<Record<string, any>>({})
+const [r2rResponses, setR2rResponses] = useState<Record<string, any>>({})
+const [r2rEffort, setR2rEffort] = useState<Record<string, any>>({})
 
   useEffect(() => {
     const fetchAssessments = async () => {
@@ -88,7 +90,31 @@ const p2pEffortMap: Record<string, any> = {}
 if (p2pEffortData) {
   p2pEffortData.forEach(r => { p2pEffortMap[r.step_code] = r })
 }
-setP2pEffort(p2pEffortMap)
+// Fetch R2R responses
+const { data: r2rResponseData } = await supabase
+  .from('assessments')
+  .select('l3_code, selected_options, pain_point, score, tool_options, tool_names, other_text')
+  .eq('user_id', user.id)
+  .eq('process_name', 'Record to Report')
+
+const r2rResponseMap: Record<string, any> = {}
+if (r2rResponseData) {
+  r2rResponseData.forEach(r => { r2rResponseMap[r.l3_code] = r })
+}
+setR2rResponses(r2rResponseMap)
+
+// Fetch R2R effort data
+const { data: r2rEffortData } = await supabase
+  .from('process_effort')
+  .select('step_code, headcount, roles, hours_per_cycle, hourly_rate, saving_percent, comments')
+  .eq('user_id', user.id)
+  .eq('process_name', 'Record to Report')
+
+const r2rEffortMap: Record<string, any> = {}
+if (r2rEffortData) {
+  r2rEffortData.forEach(r => { r2rEffortMap[r.step_code] = r })
+}
+setR2rEffort(r2rEffortMap)
 
       const rows = data as Assessment[]
 
@@ -129,6 +155,152 @@ setP2pEffort(p2pEffortMap)
 
     fetchAssessments()
   }, [router])
+  
+const r2rSteps = [
+  {
+    code: '1.1',
+    name: 'Close General Ledger Data Sources',
+    l3s: [
+      { code: '1.1.1', name: 'Close & Transfer General Ledger Data Sources', options: ['Automated via ERP with system-enforced close', 'Scheduled batch jobs with Finance oversight', 'Manual process with checklist', 'Ad-hoc based on individual judgment', 'No formal process'] },
+      { code: '1.1.2', name: 'Reconcile General Ledger Data Sources', options: ['Automated reconciliation with exception reporting', 'System-assisted with manual review', 'Manual reconciliation using spreadsheets', 'Reconciliation performed inconsistently', 'No formal reconciliation process'] },
+      { code: '1.1.3', name: 'Perform Intercompany Reconciliations', options: ['Automated matching via dedicated IC tool', 'ERP-based matching with manual resolution', 'Manual matching via spreadsheets', 'Reconciliation done inconsistently across entities', 'No formal intercompany reconciliation'] },
+    ],
+    toolOptions: ['ERP automated close (SAP, Oracle, etc.)', 'Dedicated reconciliation tool', 'Spreadsheet-based', 'Manual/no formal tool'],
+  },
+  {
+    code: '1.2',
+    name: 'Pre-Close Activities',
+    l3s: [
+      { code: '1.2.1', name: 'Record Journal Entries', options: ['Automated journals via ERP with workflow approval', 'Preparer/approver workflow in ERP', 'Manual entries with offline approval', 'Entries recorded without formal approval', 'No defined process'] },
+      { code: '1.2.2', name: 'Process General Ledger Allocations', options: ['Automated allocation rules in ERP', 'System-assisted with manual override', 'Manual allocation via journal entries', 'Allocations done inconsistently', 'No formal allocation process'] },
+      { code: '1.2.3', name: 'Record Statutory Journal Entries', options: ['Automated based on defined rules', 'Finance team prepares with technical review', 'Ad-hoc based on accounting team judgment', 'Inconsistently applied across entities', 'No defined process'] },
+      { code: '1.2.4', name: 'Perform GL Foreign Currency Accounting', options: ['Automated revaluation via ERP', 'System-calculated with manual review', 'Manual calculation and journal entry', 'Done inconsistently across currencies', 'No formal FX accounting process'] },
+      { code: '1.2.5', name: 'Process Local Tax Calculations & Journal Entries', options: ['Integrated tax engine with automated journals', 'Tax team calculates with Finance posting', 'Manual calculation and entry', 'Inconsistent across jurisdictions', 'No formal process'] },
+      { code: '1.2.6', name: 'Perform Journal Review Checks', options: ['Automated validation rules in ERP', 'Structured peer review process', 'Manager spot-check review', 'Minimal review performed', 'No journal review process'] },
+    ],
+    toolOptions: ['ERP journal workflow', 'Dedicated close management tool', 'Spreadsheet-based', 'Manual process'],
+  },
+  {
+    code: '1.3',
+    name: 'Preliminary Financial Reviews & GL Close',
+    l3s: [
+      { code: '1.3.1', name: 'Review Trial Balance', options: ['Automated variance analysis with thresholds', 'Finance team structured review', 'Manager-level spot check', 'Minimal review performed', 'No formal trial balance review'] },
+      { code: '1.3.2', name: 'Review Preliminary Financial Statements', options: ['Structured multi-level review with sign-off', 'CFO/Finance Director review', 'Team-level review only', 'Informal review without documentation', 'No formal review process'] },
+      { code: '1.3.3', name: 'Record Management & Corporate Adjustments', options: ['Formal adjustment process with documented rationale', 'CFO-approved adjustments with journal entries', 'Ad-hoc adjustments as needed', 'Inconsistent adjustment process', 'No formal adjustment process'] },
+      { code: '1.3.4', name: 'Close General Ledger', options: ['System-enforced close with automated lock', 'Finance team closes with IT support', 'Manual period close process', 'Close performed inconsistently', 'No formal GL close process'] },
+      { code: '1.3.5', name: 'Manage and Perform Period End Reconciliations', options: ['Automated reconciliation platform', 'Structured reconciliation programme with tracking', 'Individual reconciliations without central oversight', 'Reconciliations done selectively', 'No formal reconciliation programme'] },
+    ],
+    toolOptions: ['Close management platform', 'ERP standard close', 'Reconciliation tool', 'Spreadsheet-based'],
+  },
+  {
+    code: '1.4',
+    name: 'Intercompany Accounting & Eliminations',
+    l3s: [
+      { code: '1.4.1', name: 'Process Intercompany Transactions', options: ['Automated IC transaction matching in ERP', 'Centralised IC team with defined processes', 'Decentralised with coordination between entities', 'Ad-hoc processing without standards', 'No formal IC transaction process'] },
+      { code: '1.4.2', name: 'Perform Intercompany Matching & Reconciliation', options: ['Automated matching with exception management', 'System-assisted matching with manual resolution', 'Manual matching via spreadsheets', 'Matching done inconsistently', 'No formal matching process'] },
+      { code: '1.4.3', name: 'Resolve Intercompany Disputes', options: ['Defined escalation process with SLAs', 'Cross-entity finance team resolution', 'Ad-hoc resolution between entities', 'Disputes often left unresolved', 'No formal dispute resolution process'] },
+      { code: '1.4.4', name: 'Process Intercompany Eliminations', options: ['Automated eliminations in consolidation system', 'System-generated with manual review', 'Manual elimination journals', 'Eliminations done inconsistently', 'No formal elimination process'] },
+    ],
+    toolOptions: ['Dedicated IC management tool', 'Consolidation system IC module', 'ERP-based', 'Spreadsheet-based'],
+  },
+  {
+    code: '1.5',
+    name: 'Financial Consolidation',
+    l3s: [
+      { code: '1.5.1', name: 'Preliminary Consolidation Processes & Checks', options: ['Automated validation rules in consolidation system', 'Structured pre-consolidation checklist', 'Finance team manual checks', 'Minimal pre-consolidation review', 'No formal preliminary checks'] },
+      { code: '1.5.2', name: 'Process Currency Translations', options: ['Automated in consolidation system with defined rates', 'System-calculated with Finance rate management', 'Manual calculation and journal', 'Inconsistent approach across entities', 'No formal currency translation process'] },
+      { code: '1.5.3', name: 'Process Intercompany Eliminations', options: ['Automated eliminations in consolidation system', 'System-generated with review', 'Manual elimination entries', 'Done inconsistently', 'No formal process'] },
+      { code: '1.5.4', name: 'Process Consolidation Adjustments', options: ['Formal adjustment process with documented rationale', 'Group Finance team controlled adjustments', 'Ad-hoc adjustments as needed', 'Inconsistent process', 'No formal adjustment process'] },
+      { code: '1.5.5', name: 'Process Tax Calculations & Consolidated Tax Journal Entries', options: ['Integrated tax engine with automated journals', 'Tax team calculates with Group Finance posting', 'Manual calculation and entry', 'Inconsistent across jurisdictions', 'No formal process'] },
+      { code: '1.5.6', name: 'Close Corporate Consolidation Ledger', options: ['System-enforced close in consolidation platform', 'Group Finance controlled close', 'Manual close process', 'Close performed inconsistently', 'No formal consolidation close'] },
+    ],
+    toolOptions: ['Dedicated consolidation platform (HFM, BPC, etc.)', 'ERP consolidation module', 'Spreadsheet-based', 'No formal tool'],
+  },
+  {
+    code: '1.6',
+    name: 'Period End Reporting',
+    l3s: [
+      { code: '1.6.1', name: 'Prepare External Reporting & Notes to the Financials', options: ['Automated population from consolidation system', 'Structured preparation process with templates', 'Manual preparation by accounting team', 'Ad-hoc preparation each period', 'No formal preparation process'] },
+      { code: '1.6.2', name: 'Prepare Statutory Filings & Reporting', options: ['XBRL/iXBRL automated filing', 'Structured filing process with compliance checks', 'Manual preparation and submission', 'Inconsistent across jurisdictions', 'No formal filing process'] },
+      { code: '1.6.3', name: 'Prepare Shareholder Reporting & Manage Investor Relations', options: ['Structured investor relations process with Board review', 'Finance and IR team collaboration', 'Finance-led preparation with ad-hoc IR input', 'Minimal formal shareholder reporting', 'No formal process'] },
+      { code: '1.6.4', name: 'Prepare Regulatory Reporting', options: ['Automated regulatory reporting solution', 'Dedicated compliance team with structured process', 'Finance team manual preparation', 'Inconsistent across regulatory requirements', 'No formal regulatory reporting process'] },
+      { code: '1.6.5', name: 'Prepare Financial Management Reporting', options: ['Automated from BI/analytics platform', 'Structured reporting pack with defined templates', 'Manual preparation each period', 'Ad-hoc reporting on request', 'No formal management reporting process'] },
+    ],
+    toolOptions: ['Dedicated reporting platform', 'BI/analytics tool', 'ERP standard reports', 'Spreadsheet-based'],
+  },
+  {
+    code: '1.7',
+    name: 'Management Reporting & Commentary',
+    l3s: [
+      { code: '1.7.1', name: 'Prepare Management Accounts Pack', options: ['Automated population from data warehouse/BI', 'Structured preparation with defined templates', 'Manual compilation each period', 'Ad-hoc preparation based on requests', 'No formal management accounts process'] },
+      { code: '1.7.2', name: 'Write CFO Commentary & Narrative', options: ['AI-assisted narrative generation', 'Structured template with Finance input', 'CFO writes with Finance support', 'Ad-hoc narrative without structure', 'No formal commentary process'] },
+      { code: '1.7.3', name: 'Distribute Reports to Stakeholders', options: ['Automated distribution via reporting platform', 'Scheduled email distribution with version control', 'Manual distribution to stakeholders', 'Ad-hoc distribution on request', 'No formal distribution process'] },
+      { code: '1.7.4', name: 'Gather Management Feedback & Actions', options: ['Structured feedback process with action tracking', 'Regular review meetings with action log', 'Informal feedback collection', 'Minimal feedback gathered', 'No formal feedback process'] },
+    ],
+    toolOptions: ['BI/analytics platform', 'Reporting automation tool', 'Presentation software', 'Spreadsheet-based'],
+  },
+  {
+    code: '1.8',
+    name: 'Technical Accounting',
+    l3s: [
+      { code: '1.8.1', name: 'Understand & Interpret New Accounting Pronouncements', options: ['Dedicated technical accounting team with structured process', 'Finance team with external advisor support', 'Ad-hoc interpretation as standards are issued', 'Reactive interpretation when issues arise', 'No formal technical accounting process'] },
+      { code: '1.8.2', name: 'Identify & Monitor Accounting Issues', options: ['Proactive monitoring with issue tracking system', 'Regular technical accounting reviews', 'Ad-hoc identification when issues arise', 'Reactive response to audit findings', 'No formal issue monitoring process'] },
+      { code: '1.8.3', name: 'Maintain Disclosures', options: ['Automated disclosure management system', 'Structured disclosure checklist and review', 'Manual maintenance by accounting team', 'Ad-hoc updates as required', 'No formal disclosure management process'] },
+      { code: '1.8.4', name: 'Maintain & Publish Accounting Policies', options: ['Central policy management system with version control', 'Finance team maintains with regular review cycle', 'Ad-hoc updates when needed', 'Policies exist but are rarely updated', 'No formal accounting policy management'] },
+    ],
+    toolOptions: ['Dedicated technical accounting tool', 'Document management system', 'Shared drive/intranet', 'Manual/no formal tool'],
+  },
+  {
+    code: '1.9',
+    name: 'Manage Process',
+    l3s: [
+      { code: '1.9.1', name: 'Manage Close Process & Calendar', options: ['Automated close management platform with task tracking', 'Centralised calendar with Finance ownership', 'Shared calendar with informal tracking', 'Informal close schedule', 'No formal close calendar'] },
+      { code: '1.9.2', name: 'Maintain Policies, Procedures, Standards & Templates', options: ['Central repository with version control and review cycle', 'Finance team maintains and distributes', 'SharePoint/intranet based', 'Ad-hoc updates as needed', 'No formal policy management'] },
+      { code: '1.9.3', name: 'Maintain Internal Controls', options: ['Integrated GRC platform with automated testing', 'Formal control framework with periodic testing', 'Audit-driven controls', 'Informal control checks', 'No formal control framework'] },
+      { code: '1.9.4', name: 'Manage External Audit', options: ['Structured audit management with dedicated team', 'Finance team leads with clear ownership', 'Ad-hoc response to auditor requests', 'Reactive audit management', 'No formal audit management process'] },
+      { code: '1.9.5', name: 'Manage Process Efficiency & Effectiveness', options: ['KPIs tracked with continuous improvement programme', 'Regular process reviews with improvement actions', 'Ad-hoc improvement initiatives', 'Minimal measurement of process performance', 'No formal efficiency management'] },
+      { code: '1.9.6', name: 'Enhance Business Partner and Employee Experience', options: ['Dedicated business partnering model with SLAs', 'Finance team provides proactive support', 'Reactive support to business requests', 'Minimal business partnering', 'No formal business partnering in R2R'] },
+      { code: '1.9.7', name: 'Archive & Maintain Records', options: ['Automated archiving with retention policies', 'Structured archive management process', 'Manual archiving by Finance team', 'Ad-hoc archiving', 'No formal record management'] },
+    ],
+    toolOptions: ['Close management platform', 'GRC/controls tool', 'Document management system', 'Manual/spreadsheet-based'],
+  },
+  {
+    code: '1.10',
+    name: 'System Governance',
+    l3s: [
+      { code: '1.10.1', name: 'Maintain Data Model', options: ['Formal MDM process with governance board', 'Finance and IT jointly manage', 'IT manages with Finance input', 'Ad-hoc changes as required', 'No formal data model governance'] },
+      { code: '1.10.2', name: 'Maintain Application Configuration & Security', options: ['Formal configuration management with change control', 'IT manages with Finance oversight', 'IT manages independently', 'Ad-hoc configuration changes', 'No formal configuration management'] },
+      { code: '1.10.3', name: 'Manage Application Releases & Upgrades', options: ['Formal release management with testing protocols', 'IT-led with Finance UAT', 'Minimal testing before release', 'Reactive upgrade management', 'No formal release management'] },
+      { code: '1.10.4', name: 'Maintain Reports', options: ['Centralised report catalogue with version control', 'Finance team maintains standard reports', 'IT manages report library', 'Ad-hoc report maintenance', 'No formal report management'] },
+      { code: '1.10.5', name: 'Manage Interfaces', options: ['Automated interface monitoring with alerting', 'IT team manages with Finance oversight', 'IT manages independently', 'Reactive interface management', 'No formal interface management'] },
+      { code: '1.10.6', name: 'Maintain Process Automation & Digital Labor', options: ['Centre of excellence for automation with formal governance', 'IT and Finance jointly manage automation', 'Ad-hoc automation maintenance', 'Minimal automation in place', 'No formal automation programme'] },
+    ],
+    toolOptions: ['ERP with formal governance', 'Dedicated ITSM tool', 'Manual governance process', 'No formal system governance'],
+  },
+  {
+    code: '1.11',
+    name: 'AI & Intelligent Automation',
+    l3s: [
+      { code: '1.11.1', name: 'AI-Assisted Journal Entry Processing', options: ['AI suggests and auto-posts routine journals', 'AI flags anomalies for review', 'Basic automation for recurring journals only', 'Exploring AI for journal processing', 'No AI in journal processing'] },
+      { code: '1.11.2', name: 'Automated Reconciliations', options: ['Fully automated with AI matching', 'High match rate with exception-only review', 'Partially automated key reconciliations', 'Basic automation for simple reconciliations', 'Largely manual reconciliations'] },
+      { code: '1.11.3', name: 'Intelligent Close Management', options: ['AI predicts close risks and optimises sequencing', 'Automated task tracking with smart alerts', 'Basic close tracking tool', 'Spreadsheet-based close tracking', 'No intelligent close management'] },
+      { code: '1.11.4', name: 'Predictive Reporting & Analytics', options: ['AI-driven predictive analytics and commentary', 'Advanced analytics with some predictive elements', 'Standard BI reporting with historical analysis', 'Basic reporting without analytics', 'No predictive capabilities'] },
+      { code: '1.11.5', name: 'AI-Powered Anomaly Detection', options: ['AI-powered continuous anomaly detection', 'Automated threshold-based alerting', 'Manual variance analysis', 'Ad-hoc anomaly identification', 'No formal anomaly detection'] },
+    ],
+    toolOptions: ['Dedicated AI/ML platform', 'RPA tools', 'ERP automation features', 'No AI or automation in use'],
+  },
+  {
+    code: '1.12',
+    name: 'Continuous Improvement',
+    l3s: [
+      { code: '1.12.1', name: 'Process Performance Monitoring', options: ['Real-time KPI dashboard with automated alerts', 'Regular KPI reporting with trend analysis', 'Periodic performance reviews', 'Ad-hoc performance measurement', 'No formal performance monitoring'] },
+      { code: '1.12.2', name: 'Benchmark & Maturity Assessment', options: ['Regular external benchmarking with industry peers', 'Internal benchmarking across entities', 'Ad-hoc benchmarking when issues arise', 'Limited benchmarking activity', 'No formal benchmarking'] },
+      { code: '1.12.3', name: 'Finance Transformation Roadmap', options: ['Formal transformation programme with dedicated team', 'Finance leadership owns roadmap with regular reviews', 'Ad-hoc improvement initiatives without roadmap', 'Limited transformation planning', 'No formal transformation roadmap'] },
+    ],
+    toolOptions: ['Dedicated process improvement tool', 'Project management platform', 'Spreadsheet-based tracking', 'No formal improvement programme'],
+  },
+]
+
 const p2pSteps = [
     { code: '1.1', name: 'Develop Top-down Plan', toolQuestion: 'How are strategic planning and target-setting managed in your organisation?', toolOptions: ['Mostly in Excel or offline', 'Mostly in a dedicated system or platform', 'A mix of Excel and platform tools', 'Not formally structured'], l3s: [
       { code: '1.1.1', name: 'Perform Strategic Analysis', options: ['Internal workshops', 'Market research & analyst insights', 'External consultants', 'Formal structured methodology (PESTLE/SWOT)', 'Not formally done'] },
@@ -191,6 +363,40 @@ const p2pSteps = [
       { code: '1.7.9', name: 'Archive & Maintain Records', options: ['Automated archiving system', 'SharePoint/document management', 'Finance manually archives', 'Email-based', 'No formal archiving'] },
     ]},
   ]
+
+  const handleDownloadTemplateR2R = () => {
+    const rows: string[][] = [['Step Code', 'Step Name', 'L3 Code', 'L3 Name', 'Available Options', 'Selected Options (semicolon separated)', 'Pain Point', 'Score (1-5)', 'Type']]
+    for (const s of r2rSteps) {
+      for (const l3 of s.l3s) {
+        const r = r2rResponses[l3.code] || {}
+        const selected = (r.selected_options || []).join('; ')
+        const painPoint = r.pain_point || ''
+        const score = r.score != null ? String(r.score) : ''
+        rows.push([s.code, s.name, l3.code, l3.name, l3.options.join('; '), selected, painPoint, score, 'L3'])
+      }
+      const firstL3Code = s.l3s[0]?.code
+      const firstL3R = firstL3Code ? (r2rResponses[firstL3Code] || {}) : {}
+      const toolSelected = (firstL3R.tool_options || []).join('; ')
+      rows.push([s.code, s.name, 'TOOL', 'Tool Usage', s.toolOptions.join('; '), toolSelected, '', '', 'TOOL'])
+      const eff = r2rEffort[s.code] || {}
+      const effortRoles = 'CFO / Finance Director; Financial Controller; FP&A Manager / Analyst; Management Accountant; Financial Accountant; Accounts Payable / Receivable; Treasury Analyst; Tax Manager; Business Partner; Operations Manager; Department Budget Holder; ERP/Systems Administrator; IT Manager; Data Analyst / BI Developer; External Auditor; Outsourced Provider'
+      const effortVal = [
+        eff.headcount || '',
+        eff.hours_per_cycle || '',
+        (eff.roles || ''),
+        eff.comments || ''
+      ].join(' | ')
+      rows.push([s.code, s.name, 'EFFORT', 'Team & Effort', `Headcount | Hours per cycle | Roles (from: ${effortRoles}) | Comments`, effortVal, '', '', 'EFFORT'])
+    }
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'record-to-report-template.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const handleDownloadTemplate = () => {
     const rows: string[][] = [['Step Code', 'Step Name', 'L3 Code', 'L3 Name', 'Available Options', 'Selected Options (semicolon separated)', 'Pain Point', 'Score (1-5)', 'Type']]
@@ -382,9 +588,9 @@ const rowType = type || painPoint // TOOL/EFFORT rows only have 7 cols, type lan
                             View Results →
                           </button>
                         ) : null}
-                        {p.processName === 'Plan to Perform' && (
+                        {(p.processName === 'Plan to Perform' || p.processName === 'Record to Report') && (
                           <>
-                            <button onClick={() => handleDownloadTemplate()} style={{ padding: '10px 20px', background: 'white', color: '#1d9e75', border: '1px solid #1d9e75', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Template</button>
+                            <button onClick={() => p.processName === 'Record to Report' ? handleDownloadTemplateR2R() : handleDownloadTemplate()} style={{ padding: '10px 20px', background: 'white', color: '#1d9e75', border: '1px solid #1d9e75', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Template</button>
                             <label style={{ padding: '10px 20px', background: 'white', color: '#1d9e75', border: '1px solid #1d9e75', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                               ⬆ Import
                               <input type="file" accept=".csv" onChange={e => handleImportCSV(e, p.processName)} style={{ display: 'none' }} />
