@@ -59,7 +59,7 @@ export default function Home() {
           <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '8px' }}>Welcome back</h2>
           <p style={{ color: '#666', fontSize: '14px', marginBottom: '24px' }}>Sign in to your account</p>
           <input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
-          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ ...inputStyle, marginBottom: '20px' }} />
+          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} style={{ ...inputStyle, marginBottom: '20px' }} />
           <button onClick={handleLogin}
             style={{ width: '100%', padding: '12px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', marginBottom: '12px' }}>
             Sign in to platform
