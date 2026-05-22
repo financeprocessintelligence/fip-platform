@@ -80,7 +80,7 @@ export default function RegisterPage() {
               <label style={labelStyle}>Email address</label>
               <input style={inputStyle} type="email" placeholder="you@organisation.com" value={form.email} onChange={e => update('email', e.target.value)} />
               <label style={labelStyle}>Password</label>
-              <input style={{ ...inputStyle, marginBottom: '24px' }} type="password" placeholder="Min. 6 characters" value={form.password} onChange={e => update('password', e.target.value)} />
+              <input style={{ ...inputStyle, marginBottom: '24px' }} type="password" placeholder="Min. 6 characters" value={form.password} onChange={e => update('password', e.target.value)} onKeyDown={e => e.key === 'Enter' && setStep(2)} />
               <button onClick={() => setStep(2)} style={{ width: '100%', padding: '12px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>
                 Continue →
               </button>

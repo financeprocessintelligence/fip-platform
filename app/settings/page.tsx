@@ -115,7 +115,7 @@ export default function SettingsPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       {/* Sidebar */}
-      <div style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0 }}>
+      <div style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <div style={{ width: '36px', height: '36px', background: '#4fa3e0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>FPI</div>
           <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Finance Process</span>
@@ -132,11 +132,6 @@ export default function SettingsPage() {
             {item}
           </div>
         ))}
-        <div style={{ marginTop: 'auto', paddingTop: '32px' }}>
-          <button onClick={handleSignOut} style={{ width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', textAlign: 'left' }}>
-            🚪 Sign Out
-          </button>
-        </div>
       </div>
 
       {/* Main */}

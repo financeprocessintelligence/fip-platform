@@ -532,19 +532,20 @@ if (!isToolOrEffort) currentStepCode = stepCode
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       {/* Sidebar */}
-      <div style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0 }}>
+      <div style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <div style={{ width: '36px', height: '36px', background: '#4fa3e0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>FPI</div>
           <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Finance Process</span>
         </div>
         <p style={{ fontSize: '11px', color: '#a0c4e8', marginBottom: '32px', marginLeft: '46px' }}>Intelligence Platform</p>
-        {['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings'].map(item => (
-          <div key={item} onClick={() => {
+        {['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings', 'Sign Out'].map(item => (
+          <div key={item} onClick={async () => {
             if (item === 'Dashboard') router.push('/dashboard')
             if (item === 'My Assessments') router.push('/my-assessments')
             if (item === 'Process Explorer') router.push('/process-explorer')
             if (item === 'Reports') router.push('/reports')
             if (item === 'Settings') router.push('/settings')
+            if (item === 'Sign Out') { await supabase.auth.signOut(); router.push('/') }
           }} style={{ padding: '10px 12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', background: item === 'My Assessments' ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
             {item}
           </div>
