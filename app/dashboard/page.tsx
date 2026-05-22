@@ -20,13 +20,17 @@ export default function Dashboard() {
     { name: 'Transact to Record', code: 'T2R', color: '#1a6b3c', available: false },
   ]
 
-  const navItems = ['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings']
+  const navItems = ['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings', 'Sign Out']
 
-  const handleNav = (item: string) => {
+  const handleNav = async (item: string) => {
     if (item === 'Process Explorer') router.push('/process-explorer')
     if (item === 'My Assessments') router.push('/my-assessments')
     if (item === 'Reports') router.push('/reports')
     if (item === 'Settings') router.push('/settings')
+    if (item === 'Sign Out') {
+      await supabase.auth.signOut()
+      router.push('/')
+    }
   }
 
   useEffect(() => {

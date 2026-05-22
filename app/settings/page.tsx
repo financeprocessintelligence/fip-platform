@@ -121,12 +121,13 @@ export default function SettingsPage() {
           <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Finance Process</span>
         </div>
         <p style={{ fontSize: '11px', color: '#a0c4e8', marginBottom: '32px', marginLeft: '46px' }}>Intelligence Platform</p>
-        {['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings'].map(item => (
-          <div key={item} onClick={() => {
+        {['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings', 'Sign Out'].map(item => (
+          <div key={item} onClick={async () => {
             if (item === 'Dashboard') router.push('/dashboard')
             if (item === 'My Assessments') router.push('/my-assessments')
             if (item === 'Process Explorer') router.push('/process-explorer')
             if (item === 'Reports') router.push('/reports')
+            if (item === 'Sign Out') { await supabase.auth.signOut(); router.push('/') }
           }} style={{ padding: '10px 12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', background: item === 'Settings' ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
             {item}
           </div>
