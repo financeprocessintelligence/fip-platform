@@ -535,7 +535,7 @@ export default function ResultsPage() {
                 {showBenchmarkInfo && (
                   <div style={{ marginTop: '12px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     <p style={{ fontSize: '13px', color: '#444', lineHeight: '1.7', marginBottom: '12px' }}>
-                      Benchmarks are derived from Arpero's proprietary Finance Maturity Index, combining primary research across 200+ Finance functions and secondary analysis of industry performance data. Peer groups are segmented by industry and organisational scale.
+                      Benchmarks are derived from FPI's proprietary Finance Maturity Index, combining primary research across 200+ Finance functions and secondary analysis of industry performance data. Peer groups are segmented by industry and organisational scale.
                     </p>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                       <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>📊 200+ Finance functions analysed</div>
