@@ -292,6 +292,11 @@ export default function ResultsPage() {
   const [generatingInsights, setGeneratingInsights] = useState(false)
   const [activeChatRec, setActiveChatRec] = useState<Recommendation | null>(null)
   const [showConsultantModal, setShowConsultantModal] = useState(false)
+  const [showBenchmarkInfo, setShowBenchmarkInfo] = useState(false)
+  const [showBenchmarkChat, setShowBenchmarkChat] = useState(false)
+  const [benchmarkChatMessages, setBenchmarkChatMessages] = useState<{role: string, content: string}[]>([])
+  const [benchmarkChatInput, setBenchmarkChatInput] = useState('')
+  const [benchmarkChatLoading, setBenchmarkChatLoading] = useState(false)
   const [effortRows, setEffortRows] = useState<any[]>([])
   const [hourlyRate, setHourlyRate] = useState<number>(0)
   const [savingPercent, setSavingPercent] = useState<number>(0)
@@ -366,6 +371,30 @@ export default function ResultsPage() {
   const benchmarks = [{ label: 'Your overall score', score: overallScore, avg: benchmarkAverages['overall'] }, ...l2Results.filter(r => r.score > 0).map(r => ({ label: `${r.code} ${r.name}`, score: r.score, avg: benchmarkAverages[r.code] || 2.5 }))]
   const keyFindings = aiInsightsData?.keyFindings || [{ type: 'strength', text: 'Your highest scoring processes show structured approaches.' }, { type: 'gap', text: 'Lower scoring processes need formalisation.' }, { type: 'opportunity', text: 'Opportunity to improve through better tooling.' }]
   const recommendations = aiInsightsData?.recommendations || defaultRecommendations
+
+  const handleBenchmarkChat = async () => {
+    if (!benchmarkChatInput.trim()) return
+    const userMsg = { role: 'user', content: benchmarkChatInput }
+    const updatedMessages = [...benchmarkChatMessages, userMsg]
+    setBenchmarkChatMessages(updatedMessages)
+    setBenchmarkChatInput('')
+    setBenchmarkChatLoading(true)
+
+
+    const response = await fetch('/api/benchmark-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: updatedMessages,
+        benchmarks,
+        overallScore
+      })
+    })
+    const data = await response.json()
+    const reply = data.reply || 'Sorry, I could not generate a response.'
+    setBenchmarkChatMessages([...updatedMessages, { role: 'assistant', content: reply }])
+    setBenchmarkChatLoading(false)
+  }
 
   const handleDownloadPDF = () => {
     router.push('/results-print')
@@ -498,7 +527,28 @@ export default function ResultsPage() {
 
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Industry Benchmarking — Financial Services</h3>
-              <p style={{ fontSize: '13px', color: '#666', marginBottom: '24px' }}>How your maturity compares to Financial Services peers at a similar organisational scale</p>
+              <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>How your maturity compares to Financial Services peers at a similar organisational scale</p>
+              <div style={{ marginBottom: '20px' }}>
+                <button onClick={() => setShowBenchmarkInfo(prev => !prev)} style={{ fontSize: '12px', color: '#0F4C81', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', padding: 0 }}>
+                  {showBenchmarkInfo ? '▲ Hide' : '▼ About this benchmark'}
+                </button>
+                {showBenchmarkInfo && (
+                  <div style={{ marginTop: '12px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <p style={{ fontSize: '13px', color: '#444', lineHeight: '1.7', marginBottom: '12px' }}>
+                      Benchmarks are derived from Arpero's proprietary Finance Maturity Index, combining primary research across 200+ Finance functions and secondary analysis of industry performance data. Peer groups are segmented by industry and organisational scale.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>📊 200+ Finance functions analysed</div>
+                      <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>🏢 Segmented by industry & org scale</div>
+                      <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>🔄 Updated annually</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
+                      <button onClick={() => setShowBenchmarkChat(true)} style={{ padding: '8px 16px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>🤖 Ask AI about your benchmark</button>
+                      <button onClick={() => setShowConsultantModal(true)} style={{ padding: '8px 16px', background: 'white', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>👤 Speak to a consultant</button>
+                    </div>
+                  </div>
+                )}
+              </div>
               {benchmarks.map((item, i) => {
                 const diff = (item.score - item.avg).toFixed(1)
                 const isAbove = item.score >= item.avg
@@ -757,6 +807,41 @@ export default function ResultsPage() {
           processName="Plan to Perform"
           overallScore={overallScore}
         />
+      )}
+
+      {showBenchmarkChat && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: '12px', width: '560px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', margin: 0 }}>🤖 Ask AI about your benchmark</h3>
+                <p style={{ fontSize: '12px', color: '#666', margin: '4px 0 0' }}>Powered by Arpero Finance Intelligence</p>
+              </div>
+              <button onClick={() => setShowBenchmarkChat(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#666' }}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '300px' }}>
+              {benchmarkChatMessages.length === 0 && (
+                <div style={{ fontSize: '13px', color: '#666', fontStyle: 'italic' }}>Ask me anything about your benchmark results — e.g. "Why am I below average in Develop Top-down Plan?" or "What should I focus on to improve my score?"</div>
+              )}
+              {benchmarkChatMessages.map((m, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', lineHeight: '1.6', background: m.role === 'user' ? '#0F4C81' : '#f4f6f9', color: m.role === 'user' ? 'white' : '#1a1a2e' }}>
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+              {benchmarkChatLoading && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', background: '#f4f6f9', color: '#666' }}>Thinking...</div>
+                </div>
+              )}
+            </div>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '10px' }}>
+              <input value={benchmarkChatInput} onChange={e => setBenchmarkChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleBenchmarkChat()} placeholder="Ask a question about your benchmark..." style={{ flex: 1, padding: '10px 14px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '13px', color: '#1a1a2e', background: 'white' }} />
+              <button onClick={handleBenchmarkChat} disabled={benchmarkChatLoading} style={{ padding: '10px 18px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Send</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
