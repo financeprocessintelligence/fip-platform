@@ -944,6 +944,8 @@ export default function ResultsR2RPage() {
           </div>
         </div>
       )}
+
+      {showConsultantModal && (
         <ConsultantModal
           onClose={() => setShowConsultantModal(false)}
           processName="Record to Report"
