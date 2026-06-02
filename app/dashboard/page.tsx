@@ -15,7 +15,8 @@ export default function Dashboard() {
     { name: 'Record to Report', code: 'R2R', color: '#1a6b5c', available: true },
     { name: 'Quote to Cash', code: 'Q2C', color: '#7b3fa0', available: false },
     { name: 'Project to Result', code: 'P2R', color: '#b8600a', available: false },
-    { name: 'Source to Pay', code: 'S2P', color: '#1a5276', available: false },
+    { name: 'Source to Procure', code: 'S2P', color: '#1a5276', available: false },
+{ name: 'Procure to Pay', code: 'PtP', color: '#0e6655', available: true },
     { name: 'Acquire to Retire', code: 'A2R', color: '#6b1a1a', available: false },
     { name: 'Transact to Record', code: 'T2R', color: '#1a6b3c', available: false },
   ]
@@ -97,7 +98,7 @@ export default function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
           {[
             { label: 'Assessments Completed', value: assessmentsCompleted.toString() },
-            { label: 'Processes Available', value: '2' },
+            { label: 'Processes Available', value: '3' },
             { label: 'Overall Maturity', value: overallMaturity },
           ].map(stat => (
             <div key={stat.label} style={{ background: 'white', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
@@ -110,7 +111,7 @@ export default function Dashboard() {
         <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '16px' }}>Finance Process Taxonomy</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
           {processes.map(p => (
-            <div key={p.code} onClick={() => p.available && router.push('/process-explorer')} style={{
+            <div key={p.code} onClick={() => p.available && router.push(p.code === 'PtP' ? '/assessment-ptp' : '/process-explorer')} style={{
               background: p.available ? 'white' : '#f0f0f0',
               borderRadius: '8px',
               padding: '20px',
