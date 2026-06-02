@@ -16,6 +16,23 @@ const taxonomy: Record<string, { columns: { groupName: string; code: string; nam
       { groupName: 'Govern & Enable', code: '1.7', name: 'Govern the Process', activities: ['Manage FP&A Planning & Reporting Calendar', 'Manage Policies, Standards & Templates', 'Manage Data & Master Data', 'Manage Planning & Reporting Systems (EPM)', 'Manage Internal Controls', 'Process Automation & Digital Tools', 'Govern AI', 'Ensure FP&A Team Capability Development', 'Archive & Maintain Records'] },
     ]
   },
+  'Procure to Pay': {
+    columns: [
+      { groupName: 'Manage Suppliers', code: '1.1', name: 'Supplier Management', activities: ['Supplier Onboarding & Qualification', 'Supplier Master Data Management', 'Supplier Performance Monitoring', 'Supplier Relationship Management', 'Supplier Risk Assessment'] },
+      { groupName: 'Request & Order', code: '1.2', name: 'Requisitioning', activities: ['Purchase Requisition Creation', 'Requisition Approval & Budget Validation', 'Catalogue & Self-Service Procurement', 'Requisition Compliance & Policy Checking', 'Requisition Lifecycle Management'] },
+      { groupName: 'Request & Order', code: '1.3', name: 'Purchasing', activities: ['Purchase Order Creation & Issuance', 'PO Approval & Compliance', 'PO Amendments & Cancellations', 'Supplier Order Confirmation', 'PO Lifecycle Tracking & Expediting'] },
+      { groupName: 'Receive Goods & Services', code: '1.4', name: 'Receiving', activities: ['Goods Receipt Processing', 'Service Confirmation & Acceptance', 'Returns & Rejections Management', 'Discrepancy Identification & Resolution', 'GRNI Recording & Management'] },
+      { groupName: 'Process Invoices & Pay', code: '1.5', name: 'Invoice Processing & Payment', activities: ['Invoice Receipt & Capture', 'Three-Way Matching (PO, GR, Invoice)', 'Invoice Exception Handling', 'Invoice Approval & Posting', 'Payment Run Management', 'Prepayments & Advance Billing Management'] },
+      { groupName: 'Process Invoices & Pay', code: '1.6', name: 'Cash & Payment Management', activities: ['Payment Terms Strategy & Management', 'Early Payment & Dynamic Discounting', 'Foreign Currency & Cross-Border Payments', 'Bank Account & Payment Method Management', 'Cash Flow Forecasting for Payables'] },
+      { groupName: 'Manage Cards & Expenses', code: '1.7', name: 'P-Card & T&E Administration', activities: ['P-Card & T&E Card Issuance & Management', 'Expense Submission & Policy Compliance', 'Expense Approval & Workflow', 'Card Transaction Reconciliation', 'T&E Reporting & Analytics'] },
+      { groupName: 'Handle Queries', code: '1.8', name: 'Purchasing/Payment Inquiries', activities: ['Supplier Payment Status Inquiries', 'Invoice Dispute Management', 'Internal Procurement Query Management', 'Overpayment & Duplicate Payment Resolution'] },
+      { groupName: 'Control & Comply', code: '1.9', name: 'Compliance & Controls', activities: ['Segregation of Duties Management', 'Fraud Detection & Prevention', 'Audit Trail & Documentation Management', 'Regulatory & Tax Compliance', 'Internal Controls Testing & Monitoring'] },
+      { groupName: 'Control & Comply', code: '1.10', name: 'Period End Close', activities: ['AP Accruals & Cut-off Management', 'GRNI Reconciliation & Clearance', 'AP Sub-Ledger to GL Reconciliation', 'Prepaid Expense Amortisation', 'Period End AP Reporting'] },
+      { groupName: 'Govern & Enable', code: '1.11', name: 'Reporting & Analytics', activities: ['Spend Analytics & Category Reporting', 'AP & Payment Performance Reporting', 'Process Efficiency & Touchless Rate Reporting', 'Supplier Performance Reporting', 'Working Capital & DPO Reporting'] },
+      { groupName: 'Govern & Enable', code: '1.12', name: 'Manage Process', activities: ['Process Ownership & Governance', 'Process Documentation & SOPs', 'Continuous Improvement & Lean Management', 'Training & Capability Development', 'Change Management & Adoption'] },
+      { groupName: 'Govern & Enable', code: '1.13', name: 'System Governance', activities: ['ERP & Procurement System Management', 'Master Data Governance', 'System Access & Security Management', 'Automation & AI Tool Governance', 'Digital & Technology Roadmap Management'] },
+    ]
+  },
   'Record to Report': {
     columns: [
       { groupName: 'Sub Ledgers', code: '1.1', name: 'Close General Ledger Data Sources', activities: ['Close & Transfer General Ledger Data Sources', 'Reconcile General Ledger Data Sources', 'Perform Intercompany Reconciliations'] },
@@ -34,7 +51,7 @@ const taxonomy: Record<string, { columns: { groupName: string; code: string; nam
   }
 }
 
-const comingSoon = ['Quote to Cash', 'Project to Result', 'Source to Pay', 'Acquire to Retire', 'Transact to Record']
+const comingSoon = ['Quote to Cash', 'Project to Result', 'Source to Procure', 'Acquire to Retire', 'Transact to Record']
 
 const groupColors: Record<string, string> = {
   'Define Strategy & Set Targets': '#0F2744',
@@ -49,6 +66,13 @@ const groupColors: Record<string, string> = {
   'Process Governance': '#1b2631',
   'AI & Intelligent Automation': '#6b21a8',
   'Continuous Improvement': '#065f46',
+  'Manage Suppliers': '#0F2744',
+  'Request & Order': '#1a4a7a',
+  'Receive Goods & Services': '#1a5276',
+  'Process Invoices & Pay': '#154360',
+  'Manage Cards & Expenses': '#0e6655',
+  'Handle Queries': '#1b2631',
+  'Control & Comply': '#6b21a8',
 }
 
 export default function ProcessExplorer() {
@@ -138,10 +162,10 @@ export default function ProcessExplorer() {
                           <span style={{ color: '#4fa3e0', fontWeight: '600', marginRight: '4px' }}>{col.code}.{i + 1}</span>
                           {activity}
                         </span>
-                        <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : `/assessment?code=${col.code.split('.')[0]}.${col.code.split('.')[1]}`)} style={{ padding: '2px 7px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', marginLeft: '4px', flexShrink: 0 }}>Assess</button>
+                        <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : selected === 'Procure to Pay' ? `/assessment-ptp?code=${col.code}` : `/assessment?code=${col.code}`)} style={{ padding: '2px 7px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', marginLeft: '4px', flexShrink: 0 }}>Assess</button>
                       </div>
                     ))}
-                    <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : `/assessment?code=${col.code.split('.')[0]}.${col.code.split('.')[1]}`)} style={{ width: '100%', marginTop: '10px', padding: '6px', background: '#0F2744', color: 'white', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                    <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : selected === 'Procure to Pay' ? `/assessment-ptp?code=${col.code}` : `/assessment?code=${col.code}`)} style={{ width: '100%', marginTop: '10px', padding: '6px', background: '#0F2744', color: 'white', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
                       Assess All →
                     </button>
                   </div>
@@ -154,7 +178,7 @@ export default function ProcessExplorer() {
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '14px 16px', background: 'white', borderRadius: '8px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', flexShrink: 0 }}>
           <span style={{ fontSize: '14px', color: '#666' }}>Viewing: <strong style={{ color: '#1a1a2e' }}>{selected}</strong></span>
-          <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : '/assessment')} style={{ padding: '12px 28px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+          <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : selected === 'Procure to Pay' ? '/assessment-ptp' : '/assessment')} style={{ padding: '12px 28px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
             Start Full Assessment →
           </button>
         </div>
