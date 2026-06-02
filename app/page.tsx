@@ -16,7 +16,7 @@ export default function Home() {
     else router.push('/dashboard')
   }
 
-  const processes = ['Plan to Perform', 'Record to Report', 'Quote to Cash', 'Project to Result', 'Source to Pay', 'Acquire to Retire', 'Transact to Record']
+  const processes = ['Plan to Perform', 'Record to Report', 'Quote to Cash', 'Project to Result', 'Source to Procure', 'Procure to Pay', 'Acquire to Retire', 'Transact to Record']
 
   const inputStyle = { display: 'block', width: '100%', marginBottom: '12px', padding: '10px 14px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', color: '#1a1a2e', background: 'white' }
 
@@ -43,7 +43,7 @@ export default function Home() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '32px' }}>
-            {[['7', 'L2 Process Domains'], ['5', 'Maturity Levels'], ['AI', 'Powered Insights']].map(([val, label]) => (
+            {[['8', 'L2 Process Domains'], ['5', 'Maturity Levels'], ['AI', 'Powered Insights']].map(([val, label]) => (
               <div key={label}>
                 <div style={{ color: '#4fa3e0', fontSize: '28px', fontWeight: 'bold' }}>{val}</div>
                 <div style={{ color: '#7db3e8', fontSize: '12px' }}>{label}</div>
