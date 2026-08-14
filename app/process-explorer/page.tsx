@@ -162,10 +162,10 @@ export default function ProcessExplorer() {
                           <span style={{ color: '#4fa3e0', fontWeight: '600', marginRight: '4px' }}>{col.code}.{i + 1}</span>
                           {activity}
                         </span>
-                        <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : selected === 'Procure to Pay' ? `/assessment-ptp?code=${col.code}` : `/assessment?code=${col.code}`)} style={{ padding: '2px 7px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', marginLeft: '4px', flexShrink: 0 }}>Assess</button>
+                        <button onClick={() => router.push(selected === 'Record to Report' ? `/assessment-r2r?code=${col.code}` : selected === 'Procure to Pay' ? `/assessment-ptp?code=${col.code}` : `/assessment?code=${col.code}`)} style={{ padding: '2px 7px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', marginLeft: '4px', flexShrink: 0 }}>Assess</button>
                       </div>
                     ))}
-                    <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : selected === 'Procure to Pay' ? `/assessment-ptp?code=${col.code}` : `/assessment?code=${col.code}`)} style={{ width: '100%', marginTop: '10px', padding: '6px', background: '#0F2744', color: 'white', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                    <button onClick={() => router.push(selected === 'Record to Report' ? `/assessment-r2r?code=${col.code}` : selected === 'Procure to Pay' ? `/assessment-ptp?code=${col.code}` : `/assessment?code=${col.code}`)} style={{ width: '100%', marginTop: '10px', padding: '6px', background: '#0F2744', color: 'white', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
                       Assess All →
                     </button>
                   </div>

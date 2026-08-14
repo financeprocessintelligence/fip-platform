@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
 const steps = [
@@ -176,9 +177,12 @@ const steps = [
 type Answers = Record<string, { selected: string[]; other: string; painPoint: string }>
 type ToolAnswers = Record<string, { selected: string[]; tools: string }>
 
-export default function AssessmentR2RPage() {
+function AssessmentR2RPageInner() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(0)
+  const searchParams = useSearchParams()
+  const codeParam = searchParams.get('code')
+  const initialStep = codeParam ? Math.max(0, steps.findIndex(s => s.code === codeParam)) : 0
+  const [currentStep, setCurrentStep] = useState(initialStep)
   const [initialStepSet, setInitialStepSet] = useState(false)
   const [answers, setAnswers] = useState<Answers>({})
   const [toolAnswers, setToolAnswers] = useState<ToolAnswers>({})
@@ -186,7 +190,13 @@ export default function AssessmentR2RPage() {
   const [saving, setSaving] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [loadingResponses, setLoadingResponses] = useState(true)
-
+  
+  useEffect(() => {
+  if (codeParam) {
+    const idx = steps.findIndex(s => s.code === codeParam)
+    if (idx >= 0) setCurrentStep(idx)
+  }
+}, [codeParam])
   useEffect(() => {
     const loadExisting = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -227,10 +237,9 @@ export default function AssessmentR2RPage() {
         const answeredSteps = steps.filter(s =>
           s.l3s.some(l3 => loadedAnswers[l3.code]?.selected?.length > 0)
         )
-        if (answeredSteps.length > 0 && !initialStepSet) {
+        if (answeredSteps.length > 0 && !codeParam) {
           setCurrentStep(0)
-          setInitialStepSet(true)
-        }
+    }
       }
 
       const { data: effortDbData } = await supabase
@@ -612,5 +621,12 @@ const handleExportExcel = () => {
         )}
       </div>
     </div>
+  )
+}
+export default function AssessmentR2RPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AssessmentR2RPageInner />
+    </Suspense>
   )
 }
