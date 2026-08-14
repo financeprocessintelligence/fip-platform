@@ -527,7 +527,7 @@ export default function ResultsPage() {
 
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>IIndustry Benchmarking — Your Industry Peers</h3>
-              <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>How your maturity compares to Financial Services peers at a similar organisational scale</p>
+              <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>How your maturity compares to your industry peers at a similar organisational scale</p>
               <div style={{ marginBottom: '20px' }}>
                 <button onClick={() => setShowBenchmarkInfo(prev => !prev)} style={{ fontSize: '12px', color: '#0F4C81', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', padding: 0 }}>
                   {showBenchmarkInfo ? '▲ Hide' : '▼ About this benchmark'}
