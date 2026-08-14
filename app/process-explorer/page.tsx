@@ -16,6 +16,21 @@ const taxonomy: Record<string, { columns: { groupName: string; code: string; nam
       { groupName: 'Govern & Enable', code: '1.7', name: 'Govern the Process', activities: ['Manage FP&A Planning & Reporting Calendar', 'Manage Policies, Standards & Templates', 'Manage Data & Master Data', 'Manage Planning & Reporting Systems (EPM)', 'Manage Internal Controls', 'Process Automation & Digital Tools', 'Govern AI', 'Ensure FP&A Team Capability Development', 'Archive & Maintain Records'] },
     ]
   },
+  'Project to Result': {
+    columns: [
+      { groupName: 'Plan & Approve', code: '1.1', name: 'Project & Portfolio Planning', activities: ['Review & align capital plan with enterprise strategy', 'Run predictive analytics for project portfolio', 'Define & maintain portfolio of capital programmes', 'Determine Opex project plans & budgets', 'Prioritise & rank project portfolio', 'Model scenarios & assess portfolio risk'] },
+      { groupName: 'Plan & Approve', code: '1.2', name: 'Project Creation & Approval', activities: ['Define project scope (Capital/Operating/Agile)', 'Create project structure & define accounting (WBS, planned assets)', 'Assign project budget & timeline', 'Define delivery methodology (waterfall, agile, hybrid)', 'Obtain project approval & governance sign-off', 'Communicate project authorisation to stakeholders'] },
+      { groupName: 'Execute & Monitor', code: '1.3', name: 'Execute, Monitor & Control Project', activities: ['Execute project, capture & track costs', 'Capture & track commitments & purchase orders', 'Manage earned value (EVM) — planned vs actual vs earned', 'Generate progress reports & variance analysis', 'Record project adjustments & change orders', 'Revise project budget & forecast (EAC/ETC)', 'Manage project risks & issues', 'Monitor ESG & sustainability metrics on projects'] },
+      { groupName: 'Contract & Compliance', code: '1.4', name: 'Contract & Compliance Management', activities: ['Manage contract types (fixed price, cost-plus, milestone)', 'Manage government & defence contract compliance', 'Manage export control & regulatory compliance', 'Manage contract amendments & variations', 'Manage claims & dispute resolution'] },
+      { groupName: 'Bill & Revenue', code: '1.5', name: 'Manage Project Billing & Revenue', activities: ['Manage project billing — third party billing', 'Manage project billing — intercompany billing', 'Manage project revenue recognition (IFRS 15 / ASC 606)', 'Manage project profitability & margin reporting', 'Manage WIP, deferred & unbilled revenue'] },
+      { groupName: 'Capitalise & Close', code: '1.6', name: 'Capitalise & Close Project', activities: ['Capitalise project expenses including interest (AUC)', 'Manage asset under construction (AUC) to asset transfer', 'Finalise accounting & close project', 'Conduct post-project review & lessons learned', 'Capture & transfer knowledge to operations'] },
+      { groupName: 'Connected Planning', code: '1.7', name: 'Connected Planning & FP&A Integration', activities: ['Integrate project spend into rolling forecast', 'Link project cashflow to treasury & working capital', 'Report project portfolio impact on P&L and balance sheet', 'Manage benefits realisation tracking', 'Align project investment to strategic objectives'] },
+      { groupName: 'Period End', code: '1.8', name: 'Period End Close, Reporting & Analytics', activities: ['Close PA sub-ledger & reconcile with GL', 'Prepare project accruals & cut-off journals', 'Prepare project portfolio reporting & analytics', 'Report project profitability & ROI', 'Prepare ESG & sustainability project reporting'] },
+      { groupName: 'AI & Automation', code: '1.9', name: 'AI & Intelligent Automation', activities: ['AI-assisted project cost forecasting & EAC prediction', 'Automated project risk identification & early warning', 'Intelligent resource allocation optimisation', 'Automated capitalisation & asset creation', 'Digital twin & real-time project intelligence', 'Generative AI for project reporting & commentary'] },
+      { groupName: 'Govern & Enable', code: '1.10', name: 'Manage Process', activities: ['Maintain policies, procedures & templates', 'Maintain internal controls & audit trail', 'Manage process efficiency & effectiveness', 'Enhance business partner & employee experience', 'Manage training & capability development', 'Archive & maintain records'] },
+      { groupName: 'Govern & Enable', code: '1.11', name: 'System Governance', activities: ['Maintain project master data & hierarchies', 'Maintain application configuration & security', 'Manage application releases & upgrades', 'Maintain reports & analytics layer', 'Manage system interfaces & integrations', 'Maintain process automation & digital labour'] },
+    ]
+  },
   'Procure to Pay': {
     columns: [
       { groupName: 'Manage Suppliers', code: '1.1', name: 'Supplier Management', activities: ['Supplier Onboarding & Qualification', 'Supplier Master Data Management', 'Supplier Performance Monitoring', 'Supplier Relationship Management', 'Supplier Risk Assessment'] },
@@ -51,7 +66,7 @@ const taxonomy: Record<string, { columns: { groupName: string; code: string; nam
   }
 }
 
-const comingSoon = ['Quote to Cash', 'Project to Result', 'Source to Procure', 'Acquire to Retire', 'Transact to Record']
+const comingSoon = ['Quote to Cash', 'Source to Procure', 'Acquire to Retire', 'Transact to Record']
 
 const groupColors: Record<string, string> = {
   'Define Strategy & Set Targets': '#0F2744',
@@ -66,6 +81,14 @@ const groupColors: Record<string, string> = {
   'Process Governance': '#1b2631',
   'AI & Intelligent Automation': '#6b21a8',
   'Continuous Improvement': '#065f46',
+  'Plan & Approve': '#0F2744',
+  'Execute & Monitor': '#1a4a7a',
+  'Contract & Compliance': '#6b21a8',
+  'Bill & Revenue': '#1a5276',
+  'Capitalise & Close': '#154360',
+  'Connected Planning': '#065f46',
+  'Period End': '#1b2631',
+  'AI & Automation': '#3730a3',
   'Manage Suppliers': '#0F2744',
   'Request & Order': '#1a4a7a',
   'Receive Goods & Services': '#1a5276',
@@ -162,7 +185,7 @@ export default function ProcessExplorer() {
                           <span style={{ color: '#4fa3e0', fontWeight: '600', marginRight: '4px' }}>{col.code}.{i + 1}</span>
                           {activity}
                         </span>
-                        <button onClick={() => router.push(selected === 'Record to Report' ? `/assessment-r2r?code=${col.code}` : selected === 'Procure to Pay' ? `/assessment-ptp?code=${col.code}` : `/assessment?code=${col.code}`)} style={{ padding: '2px 7px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', marginLeft: '4px', flexShrink: 0 }}>Assess</button>
+                        <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : selected === 'Procure to Pay' ? `/assessment-ptp?code=${col.code}` : selected === 'Project to Result' ? `/assessment-p2r?code=${col.code}` : `/assessment?code=${col.code}`)} style={{ padding: '2px 7px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', marginLeft: '4px', flexShrink: 0 }}>Assess</button>
                       </div>
                     ))}
                     <button onClick={() => router.push(selected === 'Record to Report' ? `/assessment-r2r?code=${col.code}` : selected === 'Procure to Pay' ? `/assessment-ptp?code=${col.code}` : `/assessment?code=${col.code}`)} style={{ width: '100%', marginTop: '10px', padding: '6px', background: '#0F2744', color: 'white', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
@@ -178,7 +201,7 @@ export default function ProcessExplorer() {
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '14px 16px', background: 'white', borderRadius: '8px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', flexShrink: 0 }}>
           <span style={{ fontSize: '14px', color: '#666' }}>Viewing: <strong style={{ color: '#1a1a2e' }}>{selected}</strong></span>
-          <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : selected === 'Procure to Pay' ? '/assessment-ptp' : '/assessment')} style={{ padding: '12px 28px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+          <button onClick={() => router.push(selected === 'Record to Report' ? '/assessment-r2r' : selected === 'Procure to Pay' ? '/assessment-ptp' : selected === 'Project to Result' ? '/assessment-p2r' : '/assessment')} style={{ padding: '12px 28px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
             Start Full Assessment →
           </button>
         </div>

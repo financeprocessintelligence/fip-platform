@@ -38,7 +38,7 @@ const availableProcesses = [
   { name: 'Plan to Perform', code: 'p2p', totalSteps: 7, available: true, description: 'Strategic planning, budgeting, forecasting and performance management' },
   { name: 'Record to Report', code: 'r2r', totalSteps: 12, available: true, description: 'General ledger, financial consolidation and period end reporting' },
   { name: 'Quote to Cash', code: 'q2c', totalSteps: 8, available: false, description: 'Order management, billing and revenue recognition' },
-  { name: 'Project to Result', code: 'p2r', totalSteps: 6, available: false, description: 'Project accounting, cost management and delivery' },
+  { name: 'Project to Result', code: 'p2r', totalSteps: 11, available: true, description: 'Project accounting, EVM, billing, capitalisation and connected planning' },
   { name: 'Source to Procure', code: 's2p', totalSteps: 8, available: false, description: 'Procurement strategy, sourcing, contracting and supplier management' },
 { name: 'Procure to Pay', code: 'ptp', totalSteps: 13, available: true, description: 'Requisitioning, purchasing, receiving, invoicing and payment management' },
   { name: 'Acquire to Retire', code: 'a2r', totalSteps: 6, available: false, description: 'Asset management, depreciation and disposal' },
@@ -605,7 +605,7 @@ if (!isToolOrEffort) currentStepCode = stepCode
                       </div>
                       <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
                         {p.status === 'completed' || p.averageScore > 0 ? (
-                          <button onClick={() => router.push(p.processName === 'Record to Report' ? '/results-r2r' : p.processName === 'Procure to Pay' ? '/results-ptp' : '/results')} style={{ padding: '10px 20px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                          <button onClick={() => router.push(p.processName === 'Record to Report' ? '/results-r2r' : p.processName === 'Procure to Pay' ? '/results-ptp' : p.processName === 'Project to Result' ? '/results-p2r' : '/results')} style={{ padding: '10px 20px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                             View Results →
                           </button>
                         ) : null}
@@ -618,7 +618,7 @@ if (!isToolOrEffort) currentStepCode = stepCode
                             </label>
                           </>
                         )}
-                        <button onClick={() => router.push(p.processName === 'Record to Report' ? '/assessment-r2r' : p.processName === 'Procure to Pay' ? '/assessment-ptp' : '/assessment')} style={{ padding: '10px 20px', background: 'white', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                        <button onClick={() => router.push(p.processName === 'Record to Report' ? '/assessment-r2r' : p.processName === 'Procure to Pay' ? '/assessment-ptp' : p.processName === 'Project to Result' ? '/assessment-p2r' : '/assessment')} style={{ padding: '10px 20px', background: 'white', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                           {p.status === 'not-started' ? 'Start →' : p.status === 'in-progress' ? 'Continue →' : 'Continue →'}
                         </button>
                       </div>
