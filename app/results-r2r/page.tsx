@@ -547,11 +547,12 @@ export default function ResultsR2RPage() {
                       <div key={col.key} style={{ padding: '14px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {r.score > 0 && getScorePosition(r.score) === colIdx && (
                           <div
-                            onMouseEnter={e => { setHoveredCode(r.code); setTooltipPos({ x: e.clientX, y: e.clientY }) }}
-                            onMouseMove={e => setTooltipPos({ x: e.clientX, y: e.clientY })}
-                            onMouseLeave={() => setHoveredCode(null)}
-                            style={{ width: '20px', height: '20px', borderRadius: '50%', background: getLevelColor(r.level), boxShadow: hoveredCode === r.code ? `0 0 0 4px ${getLevelColor(r.level)}44` : 'none', cursor: 'pointer', transition: 'box-shadow 0.2s' }}
-                          />
+                             onMouseEnter={e => { setHoveredCode(r.code); setTooltipPos({ x: e.clientX, y: e.clientY }) }}
+                             onMouseMove={e => setTooltipPos({ x: e.clientX, y: e.clientY })}
+                             onMouseLeave={() => setHoveredCode(null)}
+                             style={{ width: '36px', height: '36px', borderRadius: '50%', background: getLevelColor(r.level), display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 2px 8px ${getLevelColor(r.level)}60`, cursor: 'pointer' }}>
+                              <span style={{ color: 'white', fontWeight: '800', fontSize: '13px' }}>{r.score}</span>
+                          </div>
                         )}
                       </div>
                     ))}
