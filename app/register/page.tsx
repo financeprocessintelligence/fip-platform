@@ -24,7 +24,7 @@ export default function RegisterPage() {
   const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }))
 
   const handleSubmit = async () => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
@@ -39,10 +39,24 @@ export default function RegisterPage() {
         }
       }
     })
-    if (error) setMessage(error.message)
-    else setMessage('Account created! Check your email to confirm, then sign in.')
+    if (error) {
+      setMessage(error.message)
+    } else {
+      await supabase.from('leads').insert({
+        full_name: form.fullName,
+        email: form.email,
+        job_title: form.jobTitle,
+        org_name: form.orgName,
+        industry: form.industry,
+        org_size: form.orgSize,
+        revenue: form.revenue ? `${form.currency} ${form.revenue}` : '',
+        role_type: form.roleType,
+        source: 'registration'
+      })
+      router.push('/?registered=true')
+    }
   }
-
+      
   const inputStyle = { display: 'block', width: '100%', marginBottom: '12px', padding: '10px 14px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', color: '#1a1a2e', background: 'white' }
   const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#444', marginBottom: '4px' }
 
