@@ -77,11 +77,22 @@ export default function RegisterPage() {
               <input style={inputStyle} type="text" placeholder="Your full name" value={form.fullName} onChange={e => update('fullName', e.target.value)} />
               <label style={labelStyle}>Job title</label>
               <input style={inputStyle} type="text" placeholder="e.g. CFO, Finance Manager" value={form.jobTitle} onChange={e => update('jobTitle', e.target.value)} />
-              <label style={labelStyle}>Email address</label>
+              <label style={labelStyle}>Work email address</label>
               <input style={inputStyle} type="email" placeholder="you@organisation.com" value={form.email} onChange={e => update('email', e.target.value)} />
               <label style={labelStyle}>Password</label>
               <input style={{ ...inputStyle, marginBottom: '24px' }} type="password" placeholder="Min. 6 characters" value={form.password} onChange={e => update('password', e.target.value)} onKeyDown={e => e.key === 'Enter' && setStep(2)} />
-              <button onClick={() => setStep(2)} style={{ width: '100%', padding: '12px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>
+              {message && <p style={{ color: 'red', fontSize: '13px', marginBottom: '12px' }}>{message}</p>}
+              <button onClick={() => {
+                const personalDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'live.com', 'msn.com', 'aol.com', 'googlemail.com']
+                const adminEmails = ['ravikurani@gmail.com', 'rodger.hill@arpero.co.uk', 'arthur.deoude@arpero.co.uk']
+                const domain = form.email.split('@')[1]?.toLowerCase()
+                if (personalDomains.includes(domain) && !adminEmails.includes(form.email.toLowerCase())) {
+                setMessage('Please use your work email address to register. Personal email addresses are not accepted.')
+                return
+              }
+                setMessage('')
+                setStep(2)
+                }} style={{ width: '100%', padding: '12px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}>
                 Continue →
               </button>
               <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: '#666' }}>Already have an account? <span onClick={() => router.push('/')} style={{ color: '#0F4C81', cursor: 'pointer', fontWeight: '600' }}>Sign in</span></p>
