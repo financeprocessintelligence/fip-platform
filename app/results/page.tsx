@@ -4,8 +4,6 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import RecommendationChat from '../../components/RecommendationChat'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 
 const stepDefinitions = [
   { code: '1.1', name: 'Develop Top-down Plan' },
@@ -97,7 +95,60 @@ function getScorePosition(score: number): number {
   return 4
 }
 
-function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], hoveredCode: string | null, onHover: (code: string | null) => void }) {
+function GatedOverlay({ processName }: { processName: string }) {
+  const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleUnlockRequest = async () => {
+    setSubmitting(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('leads').insert({
+        email: user.email,
+        full_name: user.user_metadata?.full_name || '',
+        org_name: user.user_metadata?.org_name || '',
+        source: 'unlock_request',
+        role_type: processName,
+      })
+    }
+    setSubmitting(false)
+    setSubmitted(true)
+  }
+
+  return (
+    <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden' }}>
+      <div style={{ filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none', opacity: 0.4, background: 'white', borderRadius: '12px', padding: '32px', minHeight: '300px' }}>
+        <div style={{ height: '16px', background: '#e0e4ea', borderRadius: '4px', marginBottom: '12px', width: '60%' }} />
+        <div style={{ height: '12px', background: '#e0e4ea', borderRadius: '4px', marginBottom: '8px', width: '80%' }} />
+        <div style={{ height: '12px', background: '#e0e4ea', borderRadius: '4px', marginBottom: '8px', width: '70%' }} />
+        <div style={{ height: '12px', background: '#e0e4ea', borderRadius: '4px', width: '50%' }} />
+      </div>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.85)', borderRadius: '12px' }}>
+        <div style={{ textAlign: 'center', padding: '32px' }}>
+          {submitted ? (
+            <>
+              <div style={{ fontSize: '36px', marginBottom: '12px' }}>✅</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '8px' }}>Request Sent!</div>
+              <div style={{ fontSize: '14px', color: '#666' }}>Our team at Arpero will be in touch within 24 hours to discuss unlocking your full {processName} results.</div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '36px', marginBottom: '12px' }}>🔒</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '8px' }}>Unlock Full Results</div>
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>This section is included in the full {processName} report.</div>
+              <div style={{ fontSize: '22px', fontWeight: '800', color: '#0F4C81', margin: '16px 0 8px' }}>£5,000 per process</div>
+              <div style={{ fontSize: '13px', color: '#666', marginBottom: '20px' }}>Includes AI Insights, Recommendations, L3 Breakdown and Effort & ROI</div>
+              <button onClick={handleUnlockRequest} disabled={submitting} style={{ padding: '12px 28px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+                {submitting ? 'Sending...' : 'Get in touch via Arpero →'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+function RadarChart({ results, hoveredCode, onHover, isUnlocked }: { results: L2Result[], hoveredCode: string | null, onHover: (code: string | null) => void, isUnlocked: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -197,7 +248,7 @@ function RadarChart({ results, hoveredCode, onHover }: { results: L2Result[], ho
       const y = cy + r * Math.sin(angle)
       if (Math.sqrt((mx - x) ** 2 + (my - y) ** 2) < 12) { found = results[i].code; break }
     }
-    onHover(found)
+    if (isUnlocked) onHover(found)
   }
 
   return (
@@ -288,6 +339,7 @@ export default function ResultsPage() {
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
   const [l2Results, setL2Results] = useState<L2Result[]>([])
   const [loading, setLoading] = useState(true)
+  const [isUnlocked, setIsUnlocked] = useState(false)
   const [aiInsightsData, setAiInsightsData] = useState<AiInsightsData | null>(null)
   const [generatingInsights, setGeneratingInsights] = useState(false)
   const [activeChatRec, setActiveChatRec] = useState<Recommendation | null>(null)
@@ -305,6 +357,18 @@ export default function ResultsPage() {
     const fetchResults = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
+
+      // Check unlock status
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_admin, unlocked_processes')
+        .eq('id', user.id)
+        .single()
+
+      const unlocked = profileData?.is_admin === true ||
+        (profileData?.unlocked_processes || []).includes('Plan to Perform')
+      setIsUnlocked(unlocked)
+
       const { data, error } = await supabase.from('assessments').select('*').eq('user_id', user.id).eq('process_name', 'Plan to Perform')
       if (error || !data) { setLoading(false); return }
       const rows = data as AssessmentRow[]
@@ -327,18 +391,20 @@ export default function ResultsPage() {
       if (roiRow) { setHourlyRate(loadedHourlyRate); setSavingPercent(loadedSavingPercent) }
       setEffortRows(filteredEffort)
 
-      const scoredResults = results.filter(r => r.score > 0)
-      if (scoredResults.length > 0) {
-        setGeneratingInsights(true)
-        try {
-          const response = await fetch('/api/generate-insights', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ l2Results: scoredResults, processName: 'Plan to Perform', effortData: filteredEffort, hourlyRate: loadedHourlyRate, savingPercent: loadedSavingPercent }) })
-          const aiData = await response.json()
-          if (aiData.success) {
-            setAiInsightsData(aiData.insights)
-            setL2Results(prev => prev.map(r => ({ ...r, narrative: aiData.insights.l2Narratives?.[r.code] || r.narrative })))
-          }
-        } catch (e) { console.error('Failed to generate insights', e) }
-        setGeneratingInsights(false)
+      if (unlocked) {
+        const scoredResults = results.filter(r => r.score > 0)
+        if (scoredResults.length > 0) {
+          setGeneratingInsights(true)
+          try {
+            const response = await fetch('/api/generate-insights', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ l2Results: scoredResults, processName: 'Plan to Perform', effortData: filteredEffort, hourlyRate: loadedHourlyRate, savingPercent: loadedSavingPercent }) })
+            const aiData = await response.json()
+            if (aiData.success) {
+              setAiInsightsData(aiData.insights)
+              setL2Results(prev => prev.map(r => ({ ...r, narrative: aiData.insights.l2Narratives?.[r.code] || r.narrative })))
+            }
+          } catch (e) { console.error('Failed to generate insights', e) }
+          setGeneratingInsights(false)
+        }
       }
     }
     fetchResults()
@@ -379,26 +445,13 @@ export default function ResultsPage() {
     setBenchmarkChatMessages(updatedMessages)
     setBenchmarkChatInput('')
     setBenchmarkChatLoading(true)
-
-
-    const response = await fetch('/api/benchmark-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: updatedMessages,
-        benchmarks,
-        overallScore
-      })
-    })
+    const response = await fetch('/api/benchmark-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: updatedMessages, benchmarks, overallScore }) })
     const data = await response.json()
-    const reply = data.reply || 'Sorry, I could not generate a response.'
-    setBenchmarkChatMessages([...updatedMessages, { role: 'assistant', content: reply }])
+    setBenchmarkChatMessages([...updatedMessages, { role: 'assistant', content: data.reply || 'Sorry, I could not generate a response.' }])
     setBenchmarkChatLoading(false)
   }
 
-  const handleDownloadPDF = () => {
-    router.push('/results-print')
-  }
+  const handleDownloadPDF = () => { router.push('/results-print') }
 
   return (
     <div id="results-content" style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
@@ -410,12 +463,11 @@ export default function ResultsPage() {
             <p style={{ color: '#a0c4e8', fontSize: '14px' }}>Finance Process Intelligence Platform · Assessment completed today · Confidential</p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={handleDownloadPDF} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>
+            {isUnlocked && <button onClick={handleDownloadPDF} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>}
             <button style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>⬇ Export to Excel</button>
             <button onClick={() => router.push('/dashboard')} style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>← Dashboard</button>
           </div>
         </div>
-
         <div style={{ display: 'flex', gap: '24px', marginTop: '28px' }}>
           <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 28px', textAlign: 'center', minWidth: '120px' }}>
             <div style={{ fontSize: '42px', fontWeight: 'bold', color: getLevelColor(getLevel(overallScore)) }}>{overallScore}</div>
@@ -436,13 +488,23 @@ export default function ResultsPage() {
               <div style={{ fontSize: '13px', color: '#a0c4e8', marginTop: '2px' }}>Score: {weakest.score} — {weakest.level}</div>
             </div>
           )}
+          {!isUnlocked && (
+            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 28px', flex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '24px' }}>🔒</span>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>Full results available</div>
+                <div style={{ fontSize: '12px', color: '#a0c4e8' }}>Unlock AI Insights, Recommendations & more for £5,000</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <div style={{ background: 'white', borderBottom: '1px solid #e0e4ea', padding: '0 40px', display: 'flex' }}>
         {['overview', 'l2breakdown', 'effort', 'aiinsights', 'recommendations'].map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '14px 20px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? '700' : '400', color: activeTab === tab ? '#0F4C81' : '#666', borderBottom: activeTab === tab ? '2px solid #0F4C81' : '2px solid transparent', cursor: 'pointer' }}>
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '14px 20px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? '700' : '400', color: activeTab === tab ? '#0F4C81' : '#666', borderBottom: activeTab === tab ? '2px solid #0F4C81' : '2px solid transparent', cursor: 'pointer', position: 'relative' }}>
             {tab === 'overview' ? 'Overview' : tab === 'l2breakdown' ? 'L3 Breakdown' : tab === 'aiinsights' ? 'AI Insights' : tab === 'recommendations' ? 'Recommendations' : '👥 Effort & ROI'}
+            {!isUnlocked && tab !== 'overview' && <span style={{ marginLeft: '4px', fontSize: '11px' }}>🔒</span>}
           </button>
         ))}
       </div>
@@ -463,11 +525,18 @@ export default function ResultsPage() {
 
             {viewMode === 'grid' ? (
               <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px', position: 'relative' }}>
-                {hoveredResult && (
+                {hoveredResult && isUnlocked && (
                   <div style={{ position: 'fixed', left: tooltipPos.x + 12, top: tooltipPos.y - 40, background: '#0F2744', color: 'white', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', zIndex: 100, pointerEvents: 'none', maxWidth: '260px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
                     <div style={{ fontWeight: '700', marginBottom: '4px' }}>{hoveredResult.code} — {hoveredResult.name}</div>
                     <div style={{ color: getLevelColor(hoveredResult.level), fontWeight: '600', marginBottom: '6px' }}>{hoveredResult.score} / 5.0 — {hoveredResult.level}</div>
                     <div style={{ fontSize: '12px', color: '#a0c4e8', lineHeight: '1.5' }}>{generatingInsights ? '⏳ Generating AI insight...' : hoveredResult.narrative}</div>
+                  </div>
+                )}
+                {hoveredResult && !isUnlocked && (
+                  <div style={{ position: 'fixed', left: tooltipPos.x + 12, top: tooltipPos.y - 40, background: '#0F2744', color: 'white', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', zIndex: 100, pointerEvents: 'none', maxWidth: '220px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+                    <div style={{ fontWeight: '700', marginBottom: '4px' }}>{hoveredResult.code} — {hoveredResult.name}</div>
+                    <div style={{ color: getLevelColor(hoveredResult.level), fontWeight: '600', marginBottom: '6px' }}>{hoveredResult.score} / 5.0 — {hoveredResult.level}</div>
+                    <div style={{ fontSize: '12px', color: '#f97316' }}>🔒 Unlock to view AI narrative</div>
                   </div>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: '200px repeat(5, 1fr)', borderBottom: '2px solid #e0e4ea' }}>
@@ -505,12 +574,19 @@ export default function ResultsPage() {
               </div>
             ) : (
               <div style={{ background: 'white', borderRadius: '12px', padding: '32px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px', position: 'relative' }}>
-                <RadarChart results={l2Results} hoveredCode={hoveredCode} onHover={setHoveredCode} />
-                {hoveredResult && (
+                <RadarChart results={l2Results} hoveredCode={hoveredCode} onHover={setHoveredCode} isUnlocked={isUnlocked} />
+                {hoveredResult && isUnlocked && (
                   <div style={{ position: 'fixed', left: tooltipPos.x + 12, top: tooltipPos.y - 40, background: '#0F2744', color: 'white', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', zIndex: 100, pointerEvents: 'none', maxWidth: '260px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
                     <div style={{ fontWeight: '700', marginBottom: '4px' }}>{hoveredResult.code} — {hoveredResult.name}</div>
                     <div style={{ color: getLevelColor(hoveredResult.level), fontWeight: '600', marginBottom: '6px' }}>{hoveredResult.score} / 5.0 — {hoveredResult.level}</div>
                     <div style={{ fontSize: '12px', color: '#a0c4e8', lineHeight: '1.5' }}>{generatingInsights ? '⏳ Generating AI insight...' : hoveredResult.narrative}</div>
+                  </div>
+                )}
+                {hoveredResult && !isUnlocked && (
+                  <div style={{ position: 'fixed', left: tooltipPos.x + 12, top: tooltipPos.y - 40, background: '#0F2744', color: 'white', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', zIndex: 100, pointerEvents: 'none', maxWidth: '220px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+                    <div style={{ fontWeight: '700', marginBottom: '4px' }}>{hoveredResult.code} — {hoveredResult.name}</div>
+                    <div style={{ color: getLevelColor(hoveredResult.level), fontWeight: '600', marginBottom: '6px' }}>{hoveredResult.score} / 5.0 — {hoveredResult.level}</div>
+                    <div style={{ fontSize: '12px', color: '#f97316' }}>🔒 Unlock to view AI narrative</div>
                   </div>
                 )}
               </div>
@@ -526,8 +602,9 @@ export default function ResultsPage() {
             </div>
 
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>IIndustry Benchmarking — Your Industry Peers</h3>
-              <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>How your maturity compares to your industry peers at a similar organisational scale</p>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Industry Benchmarking — Your Industry Peers</h3>
+              <p style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>How your maturity compares to your industry peers at a similar organisational scale</p>
+              <p style={{ fontSize: '11px', color: '#999', marginBottom: '12px', fontStyle: 'italic' }}>ⓘ Benchmark figures are AI-estimated based on aggregated industry patterns and are indicative only.</p>
               <div style={{ marginBottom: '20px' }}>
                 <button onClick={() => setShowBenchmarkInfo(prev => !prev)} style={{ fontSize: '12px', color: '#0F4C81', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', padding: 0 }}>
                   {showBenchmarkInfo ? '▲ Hide' : '▼ About this benchmark'}
@@ -543,7 +620,11 @@ export default function ResultsPage() {
                       <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>🔄 Updated annually</div>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
-                      <button onClick={() => setShowBenchmarkChat(true)} style={{ padding: '8px 16px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>🤖 Ask AI about your benchmark</button>
+                      {isUnlocked ? (
+                        <button onClick={() => setShowBenchmarkChat(true)} style={{ padding: '8px 16px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>🤖 Ask AI about your benchmark</button>
+                      ) : (
+                        <button onClick={() => window.open('mailto:enquiries@arpero.co.uk?subject=FPI Platform — Unlock Plan to Perform', '_blank')} style={{ padding: '8px 16px', background: '#f4f6f9', color: '#666', border: '1px solid #ddd', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>🔒 Ask AI about your benchmark — unlock to access</button>
+                      )}
                       <button onClick={() => setShowConsultantModal(true)} style={{ padding: '8px 16px', background: 'white', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>👤 Speak to a consultant</button>
                     </div>
                   </div>
@@ -572,269 +653,175 @@ export default function ResultsPage() {
         )}
 
         {activeTab === 'l2breakdown' && (
-          <div>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '20px' }}>L3 Breakdown by L2 Process</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              {l2Results.map(r => (
-                <div key={r.code} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', color: '#0F4C81', fontWeight: '700' }}>L2 {r.code}</div>
-                      <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e' }}>{r.name}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ padding: '3px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', background: getLevelColor(r.level), color: 'white' }}>{r.level}</span>
-                      <div style={{ fontSize: '18px', fontWeight: 'bold', color: getLevelColor(r.level), marginTop: '4px' }}>{r.score}</div>
-                    </div>
-                  </div>
-                  <div style={{ background: '#f0f0f0', borderRadius: '4px', height: '8px', marginBottom: '16px' }}>
-                    <div style={{ width: `${(r.score / 5) * 100}%`, background: getLevelColor(r.level), height: '100%', borderRadius: '4px' }} />
-                  </div>
-                  {r.l3s.filter(l => l.score > 0).map((l3, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '600', width: '40px', flexShrink: 0 }}>{l3.code}</span>
-                      <div style={{ flex: 1, background: '#f0f0f0', borderRadius: '4px', height: '6px' }}>
-                        <div style={{ width: `${(l3.score / 5) * 100}%`, background: getLevelColor(l3.level), height: '100%', borderRadius: '4px' }} />
+          isUnlocked ? (
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '20px' }}>L3 Breakdown by L2 Process</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {l2Results.map(r => (
+                  <div key={r.code} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#0F4C81', fontWeight: '700' }}>L2 {r.code}</div>
+                        <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e' }}>{r.name}</div>
                       </div>
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: getLevelColor(l3.level), width: '25px', textAlign: 'right' }}>{l3.score}</span>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ padding: '3px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', background: getLevelColor(r.level), color: 'white' }}>{r.level}</span>
+                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: getLevelColor(r.level), marginTop: '4px' }}>{r.score}</div>
+                      </div>
                     </div>
-                  ))}
-                  {r.l3s.filter(l => l.score > 0).length === 0 && (
-                    <div style={{ fontSize: '13px', color: '#999', fontStyle: 'italic' }}>No responses recorded yet</div>
-                  )}
-                </div>
-              ))}
+                    <div style={{ background: '#f0f0f0', borderRadius: '4px', height: '8px', marginBottom: '16px' }}>
+                      <div style={{ width: `${(r.score / 5) * 100}%`, background: getLevelColor(r.level), height: '100%', borderRadius: '4px' }} />
+                    </div>
+                    {r.l3s.filter(l => l.score > 0).map((l3, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '600', width: '40px', flexShrink: 0 }}>{l3.code}</span>
+                        <div style={{ flex: 1, background: '#f0f0f0', borderRadius: '4px', height: '6px' }}>
+                          <div style={{ width: `${(l3.score / 5) * 100}%`, background: getLevelColor(l3.level), height: '100%', borderRadius: '4px' }} />
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: getLevelColor(l3.level), width: '25px', textAlign: 'right' }}>{l3.score}</span>
+                      </div>
+                    ))}
+                    {r.l3s.filter(l => l.score > 0).length === 0 && (
+                      <div style={{ fontSize: '13px', color: '#999', fontStyle: 'italic' }}>No responses recorded yet</div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : <GatedOverlay processName="Plan to Perform" />
         )}
 
         {activeTab === 'aiinsights' && (
-          <div>
-            <div style={{ background: '#0F2744', borderRadius: '12px', padding: '24px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '48px', height: '48px', background: '#1d9e75', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>🤖</div>
-              <div>
-                <div style={{ fontSize: '18px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>AI-Powered Maturity Insights — Plan to Perform</div>
-                <div style={{ fontSize: '13px', color: '#7db3e8' }}>{generatingInsights ? '⏳ Generating AI insights based on your responses...' : 'Generated by FPI Intelligence based on your responses · Assessment completed today'}</div>
-              </div>
-            </div>
-            <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <span style={{ fontSize: '22px' }}>💪</span>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>What Your Organisation Does Well</span>
-              </div>
-              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>{generatingInsights ? 'Analysing your responses...' : aiInsightsData?.strengths || 'Complete your assessment to generate AI insights.'}</p>
-              {aiInsightsData?.strengthQuote && (
-                <div style={{ borderLeft: '3px solid #1d9e75', background: '#f0fdf4', padding: '14px 16px', borderRadius: '0 8px 8px 0' }}>
-                  <p style={{ fontSize: '13px', color: '#15803d', fontStyle: 'italic', lineHeight: '1.6', margin: 0 }}>"{aiInsightsData.strengthQuote}"</p>
+          isUnlocked ? (
+            <div>
+              <div style={{ background: '#0F2744', borderRadius: '12px', padding: '24px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ width: '48px', height: '48px', background: '#1d9e75', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>🤖</div>
+                <div>
+                  <div style={{ fontSize: '18px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>AI-Powered Maturity Insights — Plan to Perform</div>
+                  <div style={{ fontSize: '13px', color: '#7db3e8' }}>{generatingInsights ? '⏳ Generating AI insights based on your responses...' : 'Generated by FPI Intelligence based on your responses · Assessment completed today'}</div>
                 </div>
-              )}
-            </div>
-            <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <span style={{ fontSize: '22px' }}>⚠️</span>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>Where the Gaps Are</span>
               </div>
-              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>{generatingInsights ? 'Analysing your responses...' : aiInsightsData?.gaps || 'Complete your assessment to generate AI insights.'}</p>
-              {aiInsightsData?.gapQuote && (
-                <div style={{ borderLeft: '3px solid #ef4444', background: '#fef2f2', padding: '14px 16px', borderRadius: '0 8px 8px 0' }}>
-                  <p style={{ fontSize: '13px', color: '#dc2626', fontStyle: 'italic', lineHeight: '1.6', margin: 0 }}>"{aiInsightsData.gapQuote}"</p>
-                </div>
-              )}
-            </div>
-            <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <span style={{ fontSize: '22px' }}>💡</span>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>The Opportunity Ahead</span>
+              <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}><span style={{ fontSize: '22px' }}>💪</span><span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>What Your Organisation Does Well</span></div>
+                <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>{generatingInsights ? 'Analysing your responses...' : aiInsightsData?.strengths || 'Complete your assessment to generate AI insights.'}</p>
+                {aiInsightsData?.strengthQuote && (<div style={{ borderLeft: '3px solid #1d9e75', background: '#f0fdf4', padding: '14px 16px', borderRadius: '0 8px 8px 0' }}><p style={{ fontSize: '13px', color: '#15803d', fontStyle: 'italic', lineHeight: '1.6', margin: 0 }}>"{aiInsightsData.strengthQuote}"</p></div>)}
               </div>
-              <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8' }}>{generatingInsights ? 'Analysing your responses...' : aiInsightsData?.opportunity || 'Complete your assessment to generate AI insights.'}</p>
+              <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}><span style={{ fontSize: '22px' }}>⚠️</span><span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>Where the Gaps Are</span></div>
+                <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', marginBottom: '16px' }}>{generatingInsights ? 'Analysing your responses...' : aiInsightsData?.gaps || 'Complete your assessment to generate AI insights.'}</p>
+                {aiInsightsData?.gapQuote && (<div style={{ borderLeft: '3px solid #ef4444', background: '#fef2f2', padding: '14px 16px', borderRadius: '0 8px 8px 0' }}><p style={{ fontSize: '13px', color: '#dc2626', fontStyle: 'italic', lineHeight: '1.6', margin: 0 }}>"{aiInsightsData.gapQuote}"</p></div>)}
+              </div>
+              <div style={{ background: 'white', borderRadius: '12px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}><span style={{ fontSize: '22px' }}>💡</span><span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>The Opportunity Ahead</span></div>
+                <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8' }}>{generatingInsights ? 'Analysing your responses...' : aiInsightsData?.opportunity || 'Complete your assessment to generate AI insights.'}</p>
+              </div>
             </div>
-          </div>
+          ) : <GatedOverlay processName="Plan to Perform" />
         )}
 
         {activeTab === 'recommendations' && (
-          <div>
-            <div style={{ background: 'linear-gradient(135deg, #0F2744 0%, #0F4C81 100%)', borderRadius: '12px', padding: '24px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>👤 Want expert guidance?</div>
-                <div style={{ fontSize: '13px', color: '#a0c4e8' }}>Our FPI consultants can help you implement your improvement roadmap and accelerate your maturity journey.</div>
-              </div>
-              <button onClick={() => setShowConsultantModal(true)} style={{ padding: '10px 20px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', flexShrink: 0, marginLeft: '16px' }}>
-                Request a Consultation
-              </button>
-            </div>
-            <div style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Prioritised Improvement Recommendations</h3>
-              <p style={{ fontSize: '13px', color: '#666' }}>{generatingInsights ? '⏳ Generating AI recommendations...' : 'Ranked by impact and effort — focus on high impact, low effort actions first'}</p>
-            </div>
-            {recommendations.map((r, i) => (
-              <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px', borderLeft: `4px solid ${r.impact === 'High' && r.effort === 'Low' ? '#1d9e75' : r.impact === 'High' ? '#f97316' : '#eab308'}` }}>
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f4f6f9', border: '2px solid #e0e4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '15px', color: '#0F4C81', flexShrink: 0 }}>{r.priority}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '8px' }}>{r.action}</div>
-                    <p style={{ fontSize: '13px', color: '#555', lineHeight: '1.7', marginBottom: '12px' }}>{r.detail}</p>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                      <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#e8f4fd', color: '#0F4C81' }}>L2 {r.l2}</span>
-                      <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#fef2f2', color: '#ef4444' }}>{r.impact} Priority</span>
-                      <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: r.effort === 'Low' ? '#f0fdf4' : r.effort === 'Medium' ? '#fefce8' : '#fef2f2', color: r.effort === 'Low' ? '#22c55e' : r.effort === 'Medium' ? '#eab308' : '#ef4444' }}>{r.effort} Effort</span>
-                      <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#f4f6f9', color: '#666' }}>Owner: {r.owner}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => setActiveChatRec(r)} style={{ padding: '7px 14px', background: '#f4f6f9', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
-                        💬 Discuss with AI
-                      </button>
-                      <button onClick={() => setShowConsultantModal(true)} style={{ padding: '7px 14px', background: '#f4f6f9', color: '#1d9e75', border: '1px solid #1d9e75', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
-                        👤 Talk to a Consultant
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: '10px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em' }}>IMPACT</div>
-                    <div style={{ fontSize: '15px', fontWeight: '700', color: r.impact === 'High' ? '#ef4444' : '#eab308', marginBottom: '8px' }}>{r.impact}</div>
-                    <div style={{ fontSize: '10px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em' }}>EFFORT</div>
-                    <div style={{ fontSize: '15px', fontWeight: '700', color: r.effort === 'Low' ? '#22c55e' : r.effort === 'Medium' ? '#eab308' : '#ef4444', marginBottom: '8px' }}>{r.effort}</div>
-                    <div style={{ fontSize: '10px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em' }}>TIMELINE</div>
-                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#0F4C81' }}>{r.timeline}</div>
-                  </div>
+          isUnlocked ? (
+            <div>
+              <div style={{ background: 'linear-gradient(135deg, #0F2744 0%, #0F4C81 100%)', borderRadius: '12px', padding: '24px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>👤 Want expert guidance?</div>
+                  <div style={{ fontSize: '13px', color: '#a0c4e8' }}>Our FPI consultants can help you implement your improvement roadmap and accelerate your maturity journey.</div>
                 </div>
+                <button onClick={() => setShowConsultantModal(true)} style={{ padding: '10px 20px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', flexShrink: 0, marginLeft: '16px' }}>Request a Consultation</button>
               </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'effort' && (
-          <div>
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>👥 Team & Effort Analysis</h3>
-              <p style={{ fontSize: '13px', color: '#666' }}>Based on the effort data captured during your assessment</p>
-            </div>
-
-            {effortRows.length === 0 ? (
-              <div style={{ background: 'white', borderRadius: '12px', padding: '48px', textAlign: 'center', color: '#999' }}>
-                No effort data captured yet. Complete the Team & Effort questions in the assessment to see your ROI analysis.
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Prioritised Improvement Recommendations</h3>
+                <p style={{ fontSize: '13px', color: '#666' }}>{generatingInsights ? '⏳ Generating AI recommendations...' : 'Ranked by impact and effort — focus on high impact, low effort actions first'}</p>
               </div>
-            ) : (
-              <>
-                <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
-                  <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Effort by Process Step</h4>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr style={{ background: '#f4f6f9' }}>
-                        {['Step', 'People', 'Hours/Cycle', 'Key Roles', 'Comments'].map(h => (
-                          <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#666', textTransform: 'uppercase' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {effortRows.map((row, i) => (
-                        <tr key={i} style={{ borderTop: '1px solid #f0f0f0' }}>
-                          <td style={{ padding: '10px 12px', fontWeight: '600', color: '#1a1a2e' }}>{row.step_code} {row.step_name}</td>
-                          <td style={{ padding: '10px 12px', color: '#555' }}>{row.headcount || '-'}</td>
-                          <td style={{ padding: '10px 12px', color: '#555' }}>{row.hours_per_cycle || '-'}</td>
-                          <td style={{ padding: '10px 12px', color: '#555' }}>{(row.roles || []).slice(0, 2).join(', ')}{row.roles?.length > 2 ? ` +${row.roles.length - 2} more` : ''}</td>
-                          <td style={{ padding: '10px 12px', color: '#555', fontSize: '12px' }}>{row.comments || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                  {[
-                    { label: 'Total People', value: effortRows.reduce((sum, r) => sum + (r.headcount || 0), 0).toString(), color: '#0F4C81' },
-                    { label: 'Total Hours/Cycle', value: effortRows.reduce((sum, r) => sum + (r.hours_per_cycle || 0), 0).toString(), color: '#f97316' },
-                    { label: 'Steps with Data', value: effortRows.length.toString(), color: '#1d9e75' },
-                  ].map(s => (
-                    <div key={s.label} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', textAlign: 'center' }}>
-                      <div style={{ fontSize: '32px', fontWeight: 'bold', color: s.color }}>{s.value}</div>
-                      <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-                  <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>💰 ROI Calculator</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Average hourly cost per person (£)</div>
-                      <input type="number" min="0" placeholder="e.g. 75" value={hourlyRate || ''} onChange={e => { const val = parseInt(e.target.value) || 0; setHourlyRate(val); saveROISettings(val, savingPercent) }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', color: '#333' }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Expected time saving from transformation (%)</div>
-                      <input type="number" min="0" max="100" placeholder="e.g. 30" value={savingPercent || ''} onChange={e => { const val = parseInt(e.target.value) || 0; setSavingPercent(val); saveROISettings(hourlyRate, val) }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', color: '#333' }} />
-                    </div>
-                  </div>
-
-                  {hourlyRate > 0 && savingPercent > 0 && (() => {
-                    const totalHours = effortRows.reduce((sum, r) => sum + (r.hours_per_cycle || 0), 0)
-                    const currentCost = totalHours * hourlyRate
-                    const savingHours = Math.round(totalHours * (savingPercent / 100))
-                    const savingCost = Math.round(currentCost * (savingPercent / 100))
-                    return (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '20px', background: '#f0fdf4', borderRadius: '10px' }}>
-                        {[
-                          { label: 'Current Cost/Cycle', value: `£${currentCost.toLocaleString()}`, color: '#ef4444' },
-                          { label: 'Hours Saved/Cycle', value: `${savingHours} hrs`, color: '#f97316' },
-                          { label: 'Potential Saving/Cycle', value: `£${savingCost.toLocaleString()}`, color: '#1d9e75' },
-                        ].map(s => (
-                          <div key={s.label} style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '28px', fontWeight: 'bold', color: s.color }}>{s.value}</div>
-                            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>{s.label}</div>
-                          </div>
-                        ))}
+              {recommendations.map((r, i) => (
+                <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px', borderLeft: `4px solid ${r.impact === 'High' && r.effort === 'Low' ? '#1d9e75' : r.impact === 'High' ? '#f97316' : '#eab308'}` }}>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f4f6f9', border: '2px solid #e0e4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '15px', color: '#0F4C81', flexShrink: 0 }}>{r.priority}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '8px' }}>{r.action}</div>
+                      <p style={{ fontSize: '13px', color: '#555', lineHeight: '1.7', marginBottom: '12px' }}>{r.detail}</p>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#e8f4fd', color: '#0F4C81' }}>L2 {r.l2}</span>
+                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#fef2f2', color: '#ef4444' }}>{r.impact} Priority</span>
+                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: r.effort === 'Low' ? '#f0fdf4' : r.effort === 'Medium' ? '#fefce8' : '#fef2f2', color: r.effort === 'Low' ? '#22c55e' : r.effort === 'Medium' ? '#eab308' : '#ef4444' }}>{r.effort} Effort</span>
+                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#f4f6f9', color: '#666' }}>Owner: {r.owner}</span>
                       </div>
-                    )
-                  })()}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {activeChatRec && (
-        <RecommendationChat
-          recommendation={activeChatRec}
-          processName="Plan to Perform"
-          score={overallScore}
-          onClose={() => setActiveChatRec(null)}
-        />
-      )}
-
-      {showConsultantModal && (
-        <ConsultantModal
-          onClose={() => setShowConsultantModal(false)}
-          processName="Plan to Perform"
-          overallScore={overallScore}
-        />
-      )}
-
-      {showBenchmarkChat && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'white', borderRadius: '12px', width: '560px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', margin: 0 }}>🤖 Ask AI about your benchmark</h3>
-                <p style={{ fontSize: '12px', color: '#666', margin: '4px 0 0' }}>Powered by Arpero Finance Intelligence</p>
-              </div>
-              <button onClick={() => setShowBenchmarkChat(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#666' }}>✕</button>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '300px' }}>
-              {benchmarkChatMessages.length === 0 && (
-                <div style={{ fontSize: '13px', color: '#666', fontStyle: 'italic' }}>Ask me anything about your benchmark results — e.g. "Why am I below average in Develop Top-down Plan?" or "What should I focus on to improve my score?"</div>
-              )}
-              {benchmarkChatMessages.map((m, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                  <div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', lineHeight: '1.6', background: m.role === 'user' ? '#0F4C81' : '#f4f6f9', color: m.role === 'user' ? 'white' : '#1a1a2e' }}>
-                    {m.content}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => setActiveChatRec(r)} style={{ padding: '7px 14px', background: '#f4f6f9', color: '#0F4C81', border: '1px solid #0F4C81', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>💬 Discuss with AI</button>
+                        <button onClick={() => setShowConsultantModal(true)} style={{ padding: '7px 14px', background: '#f4f6f9', color: '#1d9e75', border: '1px solid #1d9e75', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>👤 Talk to a Consultant</button>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: '10px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em' }}>IMPACT</div>
+                      <div style={{ fontSize: '15px', fontWeight: '700', color: r.impact === 'High' ? '#ef4444' : '#eab308', marginBottom: '8px' }}>{r.impact}</div>
+                      <div style={{ fontSize: '10px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em' }}>EFFORT</div>
+                      <div style={{ fontSize: '15px', fontWeight: '700', color: r.effort === 'Low' ? '#22c55e' : r.effort === 'Medium' ? '#eab308' : '#ef4444', marginBottom: '8px' }}>{r.effort}</div>
+                      <div style={{ fontSize: '10px', color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em' }}>TIMELINE</div>
+                      <div style={{ fontSize: '15px', fontWeight: '700', color: '#0F4C81' }}>{r.timeline}</div>
+                    </div>
                   </div>
                 </div>
               ))}
-              {benchmarkChatLoading && (
-                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                  <div style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', background: '#f4f6f9', color: '#666' }}>Thinking...</div>
-                </div>
+            </div>
+          ) : <GatedOverlay processName="Plan to Perform" />
+        )}
+
+        {activeTab === 'effort' && (
+          isUnlocked ? (
+            <div>
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>👥 Team & Effort Analysis</h3>
+                <p style={{ fontSize: '13px', color: '#666' }}>Based on the effort data captured during your assessment</p>
+              </div>
+              {effortRows.length === 0 ? (
+                <div style={{ background: 'white', borderRadius: '12px', padding: '48px', textAlign: 'center', color: '#999' }}>No effort data captured yet. Complete the Team & Effort questions in the assessment to see your ROI analysis.</div>
+              ) : (
+                <>
+                  <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
+                    <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Effort by Process Step</h4>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead><tr style={{ background: '#f4f6f9' }}>{['Step', 'People', 'Hours/Cycle', 'Key Roles', 'Comments'].map(h => (<th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#666', textTransform: 'uppercase' }}>{h}</th>))}</tr></thead>
+                      <tbody>{effortRows.map((row, i) => (<tr key={i} style={{ borderTop: '1px solid #f0f0f0' }}><td style={{ padding: '10px 12px', fontWeight: '600', color: '#1a1a2e' }}>{row.step_code} {row.step_name}</td><td style={{ padding: '10px 12px', color: '#555' }}>{row.headcount || '-'}</td><td style={{ padding: '10px 12px', color: '#555' }}>{row.hours_per_cycle || '-'}</td><td style={{ padding: '10px 12px', color: '#555' }}>{(row.roles || []).slice(0, 2).join(', ')}{row.roles?.length > 2 ? ` +${row.roles.length - 2} more` : ''}</td><td style={{ padding: '10px 12px', color: '#555', fontSize: '12px' }}>{row.comments || '-'}</td></tr>))}</tbody>
+                    </table>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+                    {[{ label: 'Total People', value: effortRows.reduce((sum, r) => sum + (r.headcount || 0), 0).toString(), color: '#0F4C81' }, { label: 'Total Hours/Cycle', value: effortRows.reduce((sum, r) => sum + (r.hours_per_cycle || 0), 0).toString(), color: '#f97316' }, { label: 'Steps with Data', value: effortRows.length.toString(), color: '#1d9e75' }].map(s => (<div key={s.label} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', textAlign: 'center' }}><div style={{ fontSize: '32px', fontWeight: 'bold', color: s.color }}>{s.value}</div><div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>{s.label}</div></div>))}
+                  </div>
+                  <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+                    <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>💰 ROI Calculator</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                      <div><div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Average hourly cost per person (£)</div><input type="number" min="0" placeholder="e.g. 75" value={hourlyRate || ''} onChange={e => { const val = parseInt(e.target.value) || 0; setHourlyRate(val); saveROISettings(val, savingPercent) }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', color: '#333' }} /></div>
+                      <div><div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Expected time saving from transformation (%)</div><input type="number" min="0" max="100" placeholder="e.g. 30" value={savingPercent || ''} onChange={e => { const val = parseInt(e.target.value) || 0; setSavingPercent(val); saveROISettings(hourlyRate, val) }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', color: '#333' }} /></div>
+                    </div>
+                    {hourlyRate > 0 && savingPercent > 0 && (() => {
+                      const totalHours = effortRows.reduce((sum, r) => sum + (r.hours_per_cycle || 0), 0)
+                      const currentCost = totalHours * hourlyRate
+                      const savingHours = Math.round(totalHours * (savingPercent / 100))
+                      const savingCost = Math.round(currentCost * (savingPercent / 100))
+                      return (<div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '20px', background: '#f0fdf4', borderRadius: '10px' }}>{[{ label: 'Current Cost/Cycle', value: `£${currentCost.toLocaleString()}`, color: '#ef4444' }, { label: 'Hours Saved/Cycle', value: `${savingHours} hrs`, color: '#f97316' }, { label: 'Potential Saving/Cycle', value: `£${savingCost.toLocaleString()}`, color: '#1d9e75' }].map(s => (<div key={s.label} style={{ textAlign: 'center' }}><div style={{ fontSize: '28px', fontWeight: 'bold', color: s.color }}>{s.value}</div><div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>{s.label}</div></div>))}</div>)
+                    })()}
+                  </div>
+                </>
               )}
+            </div>
+          ) : <GatedOverlay processName="Plan to Perform" />
+        )}
+      </div>
+
+      {activeChatRec && isUnlocked && (<RecommendationChat recommendation={activeChatRec} processName="Plan to Perform" score={overallScore} onClose={() => setActiveChatRec(null)} />)}
+      {showConsultantModal && (<ConsultantModal onClose={() => setShowConsultantModal(false)} processName="Plan to Perform" overallScore={overallScore} />)}
+
+      {showBenchmarkChat && isUnlocked && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: '12px', width: '560px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div><h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', margin: 0 }}>🤖 Ask AI about your benchmark</h3><p style={{ fontSize: '12px', color: '#666', margin: '4px 0 0' }}>Powered by FPI Intelligence</p></div>
+              <button onClick={() => setShowBenchmarkChat(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#666' }}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '300px' }}>
+              {benchmarkChatMessages.length === 0 && (<div style={{ fontSize: '13px', color: '#666', fontStyle: 'italic' }}>Ask me anything about your benchmark results — e.g. "Why am I below average in Develop Top-down Plan?" or "What should I focus on to improve my score?"</div>)}
+              {benchmarkChatMessages.map((m, i) => (<div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}><div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', lineHeight: '1.6', background: m.role === 'user' ? '#0F4C81' : '#f4f6f9', color: m.role === 'user' ? 'white' : '#1a1a2e' }}>{m.content}</div></div>))}
+              {benchmarkChatLoading && (<div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', background: '#f4f6f9', color: '#666' }}>Thinking...</div></div>)}
             </div>
             <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '10px' }}>
               <input value={benchmarkChatInput} onChange={e => setBenchmarkChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleBenchmarkChat()} placeholder="Ask a question about your benchmark..." style={{ flex: 1, padding: '10px 14px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '13px', color: '#1a1a2e', background: 'white' }} />
