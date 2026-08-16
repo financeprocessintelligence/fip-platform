@@ -80,7 +80,9 @@ export default function Dashboard() {
 
       <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
         {/* Overlay for mobile */}
-        <div className="dash-overlay" onClick={() => setSidebarOpen(false)} style={{ display: 'none', position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} />
+        {sidebarOpen && (
+  <div className="dash-overlay" onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} />
+)}
 
         {/* Sidebar */}
         <div className={`dash-sidebar${sidebarOpen ? ' open' : ''}`} style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0 }}>
