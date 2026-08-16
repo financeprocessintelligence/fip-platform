@@ -136,8 +136,8 @@ function GatedOverlay({ processName }: { processName: string }) {
               <div style={{ fontSize: '36px', marginBottom: '12px' }}>🔒</div>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '8px' }}>Unlock Full Results</div>
               <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>This section is included in the full {processName} report.</div>
-              <div style={{ fontSize: '22px', fontWeight: '800', color: '#0F4C81', margin: '16px 0 8px' }}>£5,000 per process</div>
-              <div style={{ fontSize: '13px', color: '#666', marginBottom: '20px' }}>Includes AI Insights, Recommendations, L3 Breakdown and Effort & ROI</div>
+              <div style={{ fontSize: '22px', fontWeight: '800', color: '#0F4C81', margin: '16px 0 8px' }}>Ready to take the next step?</div>
+              <div style={{ fontSize: '13px', color: '#666', marginBottom: '20px' }}>Get in touch with our team to discuss full access and how we can help accelerate your finance transformation.</div>
               <button onClick={handleUnlockRequest} disabled={submitting} style={{ padding: '12px 28px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
                 {submitting ? 'Sending...' : 'Get in touch via Arpero →'}
               </button>
@@ -493,7 +493,7 @@ export default function ResultsPage() {
               <span style={{ fontSize: '24px' }}>🔒</span>
               <div>
                 <div style={{ fontSize: '14px', fontWeight: '700', color: 'white', marginBottom: '4px' }}>Full results available</div>
-                <div style={{ fontSize: '12px', color: '#a0c4e8' }}>Unlock AI Insights, Recommendations & more for £5,000</div>
+                <div style={{ fontSize: '12px', color: '#a0c4e8' }}>Get in touch to unlock your full results and accelerate your transformation</div>
               </div>
             </div>
           )}
