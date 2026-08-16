@@ -187,7 +187,7 @@ function AssessmentR2RPageInner() {
   const [answers, setAnswers] = useState<Answers>({})
   const [toolAnswers, setToolAnswers] = useState<ToolAnswers>({})
   const [effortData, setEffortData] = useState<Record<string, { headcount: number; roles: string[]; hoursPerCycle: number; comments: string }>>({})
-  const [saving, setSaving] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [loadingResponses, setLoadingResponses] = useState(true)
   
@@ -410,9 +410,22 @@ const handleExportExcel = () => {
   const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '13px', color: '#1a1a2e', background: 'white', marginTop: '6px' }
 
   return (
+    <>
+    <style>{`
+      @media (max-width: 768px) {
+        .as-sidebar { transform: translateX(-100%); position: fixed !important; z-index: 200; height: 100vh; transition: transform 0.3s; overflow-y: auto; }
+        .as-sidebar.open { transform: translateX(0); }
+        .as-topbar { display: flex !important; }
+        .as-grid { grid-template-columns: 1fr !important; }
+      }
+      @media (min-width: 769px) {
+        .as-topbar { display: none !important; }
+      }
+    `}</style>
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} />}
       {/* Sidebar */}
-      <div style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0 }}>
+      <div className={`as-sidebar${sidebarOpen ? ' open' : ''}`} style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <div style={{ width: '36px', height: '36px', background: '#4fa3e0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>FPI</div>
           <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Finance Process</span>
