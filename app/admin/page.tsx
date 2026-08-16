@@ -33,8 +33,11 @@ type UserSummary = {
   job_title: string
   created_at: string
   last_sign_in_at: string
+  unlocked_processes: string[]
   assessments: { processName: string; score: number; lastUpdated: string }[]
 }
+
+const ALL_PROCESSES = ['Plan to Perform', 'Record to Report', 'Procure to Pay', 'Project to Result']
 
 function getLevel(score: number): string {
   if (score < 2) return 'Initial'; if (score < 3) return 'Repeatable'; if (score < 4) return 'Defined'; if (score < 5) return 'Managed'; return 'Optimised'
@@ -52,12 +55,12 @@ export default function AdminPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [leadsFilter, setLeadsFilter] = useState<'all' | 'registration' | 'unlock_request'>('all')
+  const [unlocking, setUnlocking] = useState<string | null>(null)
+  const [unlockSuccess, setUnlockSuccess] = useState<string | null>(null)
+  const [selectedProcess, setSelectedProcess] = useState<Record<string, string>>({})
+  const [profiles, setProfiles] = useState<Record<string, string[]>>({})
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalAssessments: 0,
-    avgScore: 0,
-    totalLeads: 0,
-    unlockRequests: 0,
+    totalUsers: 0, totalAssessments: 0, avgScore: 0, totalLeads: 0, unlockRequests: 0,
     byIndustry: {} as Record<string, number>,
   })
 
@@ -65,7 +68,6 @@ export default function AdminPage() {
     const checkAdminAndFetch = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
-
       const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
       if (!profile?.is_admin) { router.push('/dashboard'); return }
 
@@ -76,6 +78,12 @@ export default function AdminPage() {
       const authUsers = json.users || []
       const assessmentRows = (json.assessments || []) as Assessment[]
       const leadsData = (json.leads || []) as Lead[]
+
+      // Fetch all profiles for unlocked_processes
+      const { data: profilesData } = await supabase.from('profiles').select('id, unlocked_processes')
+      const profileMap: Record<string, string[]> = {}
+      ;(profilesData || []).forEach((p: any) => { profileMap[p.id] = p.unlocked_processes || [] })
+      setProfiles(profileMap)
 
       const userList: UserSummary[] = authUsers.map((u: any) => {
         const userAssessments = assessmentRows.filter(a => a.user_id === u.id)
@@ -90,14 +98,10 @@ export default function AdminPage() {
           return { processName, score: avg, lastUpdated: rows[0]?.updated_at || '' }
         })
         return {
-          id: u.id,
-          email: u.email || '',
-          full_name: u.user_metadata?.full_name || '',
-          org_name: u.user_metadata?.org_name || '',
-          industry: u.user_metadata?.industry || '',
-          job_title: u.user_metadata?.job_title || '',
-          created_at: u.created_at || '',
-          last_sign_in_at: u.last_sign_in_at || '',
+          id: u.id, email: u.email || '', full_name: u.user_metadata?.full_name || '',
+          org_name: u.user_metadata?.org_name || '', industry: u.user_metadata?.industry || '',
+          job_title: u.user_metadata?.job_title || '', created_at: u.created_at || '',
+          last_sign_in_at: u.last_sign_in_at || '', unlocked_processes: profileMap[u.id] || [],
           assessments: processSummaries
         }
       })
@@ -111,24 +115,33 @@ export default function AdminPage() {
       userList.forEach(u => { if (u.industry) byIndustry[u.industry] = (byIndustry[u.industry] || 0) + 1 })
 
       setStats({
-        totalUsers: userList.length,
-        totalAssessments: [...new Set(assessmentRows.map(a => `${a.user_id}-${a.process_name}`))].length,
-        avgScore,
-        totalLeads: leadsData.length,
-        unlockRequests: leadsData.filter(l => l.source === 'unlock_request').length,
-        byIndustry,
+        totalUsers: userList.length, totalAssessments: [...new Set(assessmentRows.map(a => `${a.user_id}-${a.process_name}`))].length,
+        avgScore, totalLeads: leadsData.length, unlockRequests: leadsData.filter(l => l.source === 'unlock_request').length, byIndustry,
       })
-
       setLoading(false)
     }
     checkAdminAndFetch()
   }, [router])
 
+  const handleUnlock = async (userId: string, processName: string, key: string) => {
+    setUnlocking(key)
+    const current = profiles[userId] || []
+    if (current.includes(processName)) { setUnlocking(null); setUnlockSuccess(key); setTimeout(() => setUnlockSuccess(null), 3000); return }
+    const updated = [...current, processName]
+    const { error } = await supabase.from('profiles').upsert({ id: userId, unlocked_processes: updated, updated_at: new Date().toISOString() }, { onConflict: 'id' })
+    if (!error) {
+      setProfiles(prev => ({ ...prev, [userId]: updated }))
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, unlocked_processes: updated } : u))
+    }
+    setUnlocking(null)
+    setUnlockSuccess(key)
+    setTimeout(() => setUnlockSuccess(null), 3000)
+  }
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   }
-
   const formatDateTime = (dateStr: string) => {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -139,10 +152,10 @@ export default function AdminPage() {
     u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.org_name.toLowerCase().includes(searchTerm.toLowerCase())
   )
+  const filteredLeads = leads.filter(l => leadsFilter === 'all' ? true : l.source === leadsFilter)
 
-  const filteredLeads = leads.filter(l =>
-    leadsFilter === 'all' ? true : l.source === leadsFilter
-  )
+  // Find user ID by email for leads unlock
+  const findUserByEmail = (email: string) => users.find(u => u.email === email)
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'sans-serif' }}>
@@ -186,46 +199,37 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
               <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Users by Industry</h3>
-                {Object.entries(stats.byIndustry).length === 0 ? (
-                  <p style={{ color: '#999', fontSize: '14px' }}>No industry data available yet</p>
-                ) : (
+                {Object.entries(stats.byIndustry).length === 0 ? (<p style={{ color: '#999', fontSize: '14px' }}>No industry data yet</p>) : (
                   Object.entries(stats.byIndustry).map(([industry, count]) => (
                     <div key={industry} style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
                       <div style={{ width: '140px', fontSize: '13px', color: '#444' }}>{industry}</div>
-                      <div style={{ flex: 1, background: '#f0f0f0', borderRadius: '4px', height: '10px' }}>
-                        <div style={{ width: `${(count / stats.totalUsers) * 100}%`, background: '#0F4C81', height: '100%', borderRadius: '4px' }} />
-                      </div>
+                      <div style={{ flex: 1, background: '#f0f0f0', borderRadius: '4px', height: '10px' }}><div style={{ width: `${(count / stats.totalUsers) * 100}%`, background: '#0F4C81', height: '100%', borderRadius: '4px' }} /></div>
                       <div style={{ width: '30px', fontSize: '14px', fontWeight: '700', color: '#0F4C81', textAlign: 'right' }}>{count}</div>
                     </div>
                   ))
                 )}
               </div>
-
               <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Recent Unlock Requests</h3>
-                {leads.filter(l => l.source === 'unlock_request').slice(0, 5).length === 0 ? (
-                  <p style={{ color: '#999', fontSize: '14px' }}>No unlock requests yet</p>
-                ) : (
+                {leads.filter(l => l.source === 'unlock_request').slice(0, 5).length === 0 ? (<p style={{ color: '#999', fontSize: '14px' }}>No unlock requests yet</p>) : (
                   leads.filter(l => l.source === 'unlock_request').slice(0, 5).map((l, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '10px 0', borderBottom: i < 4 ? '1px solid #f0f0f0' : 'none' }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: i < 4 ? '1px solid #f0f0f0' : 'none' }}>
                       <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '12px', flexShrink: 0 }}>
                         {l.full_name ? l.full_name.charAt(0).toUpperCase() : l.email.charAt(0).toUpperCase()}
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a2e' }}>{l.full_name || l.email}</div>
-                        <div style={{ fontSize: '12px', color: '#666' }}>{l.org_name || '-'} · {l.role_type || 'Process not specified'}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>{l.org_name || '-'} · {l.role_type || '-'}</div>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#999', flexShrink: 0 }}>{formatDate(l.created_at)}</div>
+                      <div style={{ fontSize: '11px', color: '#999' }}>{formatDate(l.created_at)}</div>
                     </div>
                   ))
                 )}
               </div>
             </div>
-
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Recently Registered Users</h3>
               {users.slice(0, 5).map((u, i) => (
@@ -254,39 +258,63 @@ export default function AdminPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#f4f6f9' }}>
-                    {['Name', 'Email', 'Organisation', 'Industry', 'Job Title', 'Registered', 'Last Login', 'Assessments'].map(h => (
+                    {['Name', 'Email', 'Organisation', 'Industry', 'Registered', 'Last Login', 'Unlocked Processes', 'Unlock Access'].map(h => (
                       <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((u, i) => (
-                    <tr key={i} style={{ borderTop: '1px solid #f0f0f0' }}>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '600', color: '#1a1a2e', whiteSpace: 'nowrap' }}>{u.full_name || '-'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555' }}>{u.email}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>{u.org_name || '-'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555' }}>{u.industry || '-'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>{u.job_title || '-'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>{formatDate(u.created_at)}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: u.last_sign_in_at ? '#555' : '#999', whiteSpace: 'nowrap' }}>{u.last_sign_in_at ? formatDateTime(u.last_sign_in_at) : 'Never'}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        {u.assessments.length === 0 ? (
-                          <span style={{ fontSize: '12px', color: '#999' }}>None</span>
-                        ) : (
-                          u.assessments.map((a, j) => (
-                            <span key={j} style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '600', background: '#f0fdf4', color: '#1d9e75', marginRight: '4px', marginBottom: '2px', whiteSpace: 'nowrap' }}>
-                              {a.processName.split(' ').map((w: string) => w[0]).join('')} {a.score}
-                            </span>
-                          ))
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredUsers.map((u, i) => {
+                    const userUnlocked = profiles[u.id] || []
+                    const lockedProcesses = ALL_PROCESSES.filter(p => !userUnlocked.includes(p))
+                    return (
+                      <tr key={i} style={{ borderTop: '1px solid #f0f0f0' }}>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '600', color: '#1a1a2e', whiteSpace: 'nowrap' }}>{u.full_name || '-'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555' }}>{u.email}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>{u.org_name || '-'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555' }}>{u.industry || '-'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>{formatDate(u.created_at)}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: u.last_sign_in_at ? '#555' : '#999', whiteSpace: 'nowrap' }}>{u.last_sign_in_at ? formatDateTime(u.last_sign_in_at) : 'Never'}</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          {userUnlocked.length === 0 ? (
+                            <span style={{ fontSize: '12px', color: '#999' }}>None</span>
+                          ) : (
+                            userUnlocked.map((p, j) => (
+                              <span key={j} style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '600', background: '#f0fdf4', color: '#1d9e75', marginRight: '4px', marginBottom: '2px', whiteSpace: 'nowrap' }}>
+                                ✓ {p.split(' ').map((w: string) => w[0]).join('')}
+                              </span>
+                            ))
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          {lockedProcesses.length === 0 ? (
+                            <span style={{ fontSize: '12px', color: '#1d9e75', fontWeight: '600' }}>✓ All unlocked</span>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                              <select
+                                value={selectedProcess[u.id] || ''}
+                                onChange={e => setSelectedProcess(prev => ({ ...prev, [u.id]: e.target.value }))}
+                                style={{ padding: '5px 8px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '12px', color: '#333', background: 'white' }}
+                              >
+                                <option value="">Select process...</option>
+                                {lockedProcesses.map(p => <option key={p} value={p}>{p}</option>)}
+                              </select>
+                              <button
+                                onClick={() => selectedProcess[u.id] && handleUnlock(u.id, selectedProcess[u.id], `user-${u.id}-${selectedProcess[u.id]}`)}
+                                disabled={!selectedProcess[u.id] || unlocking === `user-${u.id}-${selectedProcess[u.id]}`}
+                                style={{ padding: '5px 10px', background: unlockSuccess === `user-${u.id}-${selectedProcess[u.id]}` ? '#1d9e75' : '#0F4C81', color: 'white', border: 'none', borderRadius: '5px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                              >
+                                {unlockSuccess === `user-${u.id}-${selectedProcess[u.id]}` ? '✓ Unlocked' : unlocking === `user-${u.id}-${selectedProcess[u.id]}` ? '...' : '🔓 Unlock'}
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
-              {filteredUsers.length === 0 && (
-                <div style={{ padding: '32px', textAlign: 'center', color: '#999' }}>No users found matching your search</div>
-              )}
+              {filteredUsers.length === 0 && <div style={{ padding: '32px', textAlign: 'center', color: '#999' }}>No users found</div>}
             </div>
           </div>
         )}
@@ -307,33 +335,52 @@ export default function AdminPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#f4f6f9' }}>
-                    {['Name', 'Email', 'Organisation', 'Industry', 'Job Title', 'Source', 'Process', 'Date'].map(h => (
+                    {['Name', 'Email', 'Organisation', 'Industry', 'Source', 'Process Requested', 'Date', 'Action'].map(h => (
                       <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLeads.map((l, i) => (
-                    <tr key={i} style={{ borderTop: '1px solid #f0f0f0' }}>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '600', color: '#1a1a2e', whiteSpace: 'nowrap' }}>{l.full_name || '-'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555' }}>{l.email}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>{l.org_name || '-'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555' }}>{l.industry || '-'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>{l.job_title || '-'}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ padding: '3px 10px', borderRadius: '10px', fontSize: '11px', fontWeight: '600', background: l.source === 'unlock_request' ? '#fef2f2' : '#f0fdf4', color: l.source === 'unlock_request' ? '#ef4444' : '#1d9e75', whiteSpace: 'nowrap' }}>
-                          {l.source === 'unlock_request' ? '🔓 Unlock Request' : '📝 Registration'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555' }}>{l.role_type || '-'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>{formatDate(l.created_at)}</td>
-                    </tr>
-                  ))}
+                  {filteredLeads.map((l, i) => {
+                    const matchedUser = findUserByEmail(l.email)
+                    const alreadyUnlocked = matchedUser && l.role_type && (profiles[matchedUser.id] || []).includes(l.role_type)
+                    const unlockKey = `lead-${l.id}`
+                    return (
+                      <tr key={i} style={{ borderTop: '1px solid #f0f0f0' }}>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '600', color: '#1a1a2e', whiteSpace: 'nowrap' }}>{l.full_name || '-'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555' }}>{l.email}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>{l.org_name || '-'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555' }}>{l.industry || '-'}</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ padding: '3px 10px', borderRadius: '10px', fontSize: '11px', fontWeight: '600', background: l.source === 'unlock_request' ? '#fef2f2' : '#f0fdf4', color: l.source === 'unlock_request' ? '#ef4444' : '#1d9e75', whiteSpace: 'nowrap' }}>
+                            {l.source === 'unlock_request' ? '🔓 Unlock Request' : '📝 Registration'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555' }}>{l.role_type || '-'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>{formatDate(l.created_at)}</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          {l.source !== 'unlock_request' || !l.role_type ? (
+                            <span style={{ fontSize: '12px', color: '#999' }}>—</span>
+                          ) : !matchedUser ? (
+                            <span style={{ fontSize: '12px', color: '#f97316' }}>User not found</span>
+                          ) : alreadyUnlocked ? (
+                            <span style={{ fontSize: '12px', color: '#1d9e75', fontWeight: '600' }}>✓ Already unlocked</span>
+                          ) : (
+                            <button
+                              onClick={() => handleUnlock(matchedUser.id, l.role_type, unlockKey)}
+                              disabled={unlocking === unlockKey}
+                              style={{ padding: '6px 14px', background: unlockSuccess === unlockKey ? '#1d9e75' : '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              {unlockSuccess === unlockKey ? '✓ Unlocked!' : unlocking === unlockKey ? 'Unlocking...' : `🔓 Unlock ${l.role_type}`}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
-              {filteredLeads.length === 0 && (
-                <div style={{ padding: '32px', textAlign: 'center', color: '#999' }}>No leads found</div>
-              )}
+              {filteredLeads.length === 0 && <div style={{ padding: '32px', textAlign: 'center', color: '#999' }}>No leads found</div>}
             </div>
           </div>
         )}
