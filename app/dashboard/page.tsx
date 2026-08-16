@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [userName, setUserName] = useState('Ravi')
   const [assessmentsCompleted, setAssessmentsCompleted] = useState(0)
   const [overallMaturity, setOverallMaturity] = useState('N/A')
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const processes = [
     { name: 'Plan to Perform', code: 'P2P', color: '#0F4C81', available: true },
@@ -21,13 +22,14 @@ export default function Dashboard() {
     { name: 'Transact to Record', code: 'T2R', color: '#1a6b3c', available: false },
   ]
 
-  const navItems = ['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings', 'Sign Out']
+  const navItems = ['Dashboard', 'My Assessments', 'Process Explorer', 'Reports', 'Settings', ...(isAdmin ? ['Admin'] : []), 'Sign Out']
 
   const handleNav = async (item: string) => {
     if (item === 'Process Explorer') router.push('/process-explorer')
     if (item === 'My Assessments') router.push('/my-assessments')
     if (item === 'Reports') router.push('/reports')
     if (item === 'Settings') router.push('/settings')
+    if (item === 'Admin') router.push('/admin')
     if (item === 'Sign Out') {
       await supabase.auth.signOut()
       router.push('/')
@@ -40,6 +42,12 @@ export default function Dashboard() {
       if (!user) return
 
       setUserName(user.user_metadata?.full_name || 'Ravi')
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single()
+      setIsAdmin(profileData?.is_admin === true)
 
       const { data } = await supabase
         .from('assessments')
