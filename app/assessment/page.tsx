@@ -131,6 +131,7 @@ function AssessmentPage() {
   const [effortData, setEffortData] = useState<Record<string, { headcount: number; roles: string[]; hoursPerCycle: number; comments: string }>>({})
   const [showReview, setShowReview] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loadingResponses, setLoadingResponses] = useState(true)
 
   useEffect(() => {
@@ -352,9 +353,24 @@ function AssessmentPage() {
   const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '13px', color: '#1a1a2e', background: 'white', marginTop: '6px' }
 
   return (
+    <>
+    <style>{`
+      @media (max-width: 768px) {
+        .as-sidebar { transform: translateX(-100%); position: fixed !important; z-index: 200; height: 100vh; transition: transform 0.3s; overflow-y: auto; }
+        .as-sidebar.open { transform: translateX(0); }
+        .as-main { flex: 1; }
+        .as-topbar { display: flex !important; }
+        .as-grid { grid-template-columns: 1fr !important; }
+        .as-nav { padding: 12px 16px !important; }
+      }
+      @media (min-width: 769px) {
+        .as-topbar { display: none !important; }
+      }
+    `}</style>
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} />}
       {/* Sidebar */}
-      <div style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0 }}>
+      <div className={`as-sidebar${sidebarOpen ? ' open' : ''}`} style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <div style={{ width: '36px', height: '36px', background: '#4fa3e0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>FPI</div>
           <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Finance Process</span>
@@ -445,6 +461,13 @@ function AssessmentPage() {
           </div>
         ) : (
           <>
+          <div className="as-topbar" style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#0F4C81' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div style={{ width: '30px', height: '30px', background: '#4fa3e0', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px', color: 'white' }}>FPI</div>
+    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>Plan to Perform</span>
+  </div>
+  <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer' }}>☰</button>
+</div>
             <div style={{ padding: '24px 32px 16px', background: 'white', borderBottom: '1px solid #e0e4ea' }}>
               <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
                 Dashboard → Process Explorer → Plan to Perform → {step.code} {step.name}
@@ -456,7 +479,7 @@ function AssessmentPage() {
             </div>
 
             <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+              <div className="as-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                 {step.l3s.map(l3 => (
                   <div key={l3.code} style={{ background: 'white', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                     <div style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '700', marginBottom: '4px' }}>{l3.code}</div>
@@ -565,6 +588,7 @@ function AssessmentPage() {
         )}
       </div>
     </div>
+    </>
   )
 }
 
