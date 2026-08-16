@@ -49,6 +49,7 @@ export default function MyAssessmentsPage() {
   const router = useRouter()
   const [processSummaries, setProcessSummaries] = useState<ProcessSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 const [p2pResponses, setP2pResponses] = useState<Record<string, any>>({})
 const [p2pEffort, setP2pEffort] = useState<Record<string, any>>({})
 const [r2rResponses, setR2rResponses] = useState<Record<string, any>>({})
@@ -531,9 +532,25 @@ if (!isToolOrEffort) currentStepCode = stepCode
   const notStartedProcesses = availableProcesses.filter(p => !startedProcessNames.includes(p.name))
 
   return (
+    <>
+    <style>{`
+      @media (max-width: 768px) {
+        .ma-sidebar { transform: translateX(-100%); position: fixed !important; z-index: 200; height: 100vh; transition: transform 0.3s; }
+        .ma-sidebar.open { transform: translateX(0); }
+        .ma-main { padding: 16px !important; }
+        .ma-topbar { display: flex !important; }
+        .ma-stats { flex-direction: column !important; gap: 8px !important; }
+        .ma-buttons { flex-direction: column !important; gap: 8px !important; margin-top: 12px !important; }
+        .ma-new-grid { grid-template-columns: 1fr !important; }
+      }
+      @media (min-width: 769px) {
+        .ma-topbar { display: none !important; }
+      }
+    `}</style>
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} />}
       {/* Sidebar */}
-      <div style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+      <div className={`ma-sidebar${sidebarOpen ? ' open' : ''}`} style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <div style={{ width: '36px', height: '36px', background: '#4fa3e0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>FPI</div>
           <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Finance Process</span>
@@ -554,7 +571,14 @@ if (!isToolOrEffort) currentStepCode = stepCode
       </div>
 
       {/* Main */}
-      <div style={{ flex: 1, background: '#f4f6f9', padding: '32px', overflowY: 'auto' }}>
+      <div className="ma-main" style={{ flex: 1, background: '#f4f6f9', padding: '32px', overflowY: 'auto' }}>
+        <div className="ma-topbar" style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', background: '#0F4C81', padding: '12px 16px', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '30px', height: '30px', background: '#4fa3e0', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px', color: 'white' }}>FPI</div>
+            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>My Assessments</span>
+          </div>
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer' }}>☰</button>
+        </div>
         <div style={{ marginBottom: '32px' }}>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a1a2e' }}>My Assessments</h1>
           <p style={{ color: '#666', marginTop: '4px' }}>Track your progress and view results across all Finance processes</p>
@@ -578,7 +602,7 @@ if (!isToolOrEffort) currentStepCode = stepCode
                             {p.status === 'completed' ? '✅ Completed' : '⏳ In Progress'}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', gap: '24px', marginBottom: '12px' }}>
+                        <div className="ma-stats" style={{ display: 'flex', gap: '24px', marginBottom: '12px' }}>
                           <div>
                             <div style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>OVERALL SCORE</div>
                             <div style={{ fontSize: '20px', fontWeight: 'bold', color: p.averageScore > 0 ? getLevelColor(p.level) : '#999' }}>
@@ -603,7 +627,7 @@ if (!isToolOrEffort) currentStepCode = stepCode
                           <div style={{ width: `${(p.completedSteps / p.totalSteps) * 100}%`, background: p.status === 'completed' ? '#1d9e75' : '#f97316', height: '100%', borderRadius: '4px' }} />
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                      <div className="ma-buttons" style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
                         {p.status === 'completed' || p.averageScore > 0 ? (
                           <button onClick={() => router.push(p.processName === 'Record to Report' ? '/results-r2r' : p.processName === 'Procure to Pay' ? '/results-ptp' : p.processName === 'Project to Result' ? '/results-p2r' : '/results')} style={{ padding: '10px 20px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                             View Results →
@@ -631,7 +655,7 @@ if (!isToolOrEffort) currentStepCode = stepCode
             {/* Start New Assessment */}
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Start New Assessment</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+              <div className="ma-new-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                 {notStartedProcesses.map((p, i) => (
                   <div key={i} style={{ background: p.available ? 'white' : '#f8f8f8', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', opacity: p.available ? 1 : 0.6, borderLeft: `4px solid ${p.available ? '#0F4C81' : '#ddd'}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
@@ -664,5 +688,6 @@ if (!isToolOrEffort) currentStepCode = stepCode
         )}
       </div>
     </div>
+    </>
   )
 }
