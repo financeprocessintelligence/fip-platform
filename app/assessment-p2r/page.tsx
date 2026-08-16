@@ -591,6 +591,7 @@ function AssessmentP2RPage() {
         )}
       </div>
     </div>
+    </>
   )
 }
 
