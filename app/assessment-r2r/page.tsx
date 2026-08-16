@@ -588,7 +588,7 @@ const handleExportExcel = () => {
 
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>What roles are involved? (select all that apply)</div>
-                <div style={{ display: 'grid', <div className="as-grid" style={{ display: 'grid', <div className="as-grid" style={{ display: 'grid', <div className="as-grid" style={{ display: 'grid', <div className="as-grid" style={{ display: 'grid', <div className="as-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>, gap: '16px', marginBottom: '24px' }}>, gap: '16px', marginBottom: '24px' }}>, gap: '16px', marginBottom: '24px' }}>, gap: '16px', marginBottom: '24px' }}>, gap: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                   {['CFO / Finance Director', 'Financial Controller', 'FP&A Manager / Analyst', 'Management Accountant', 'Financial Accountant', 'Accounts Payable / Receivable', 'Treasury Analyst', 'Tax Manager', 'Business Partner', 'Operations Manager', 'Department Budget Holder', 'ERP/Systems Administrator', 'IT Manager', 'Data Analyst / BI Developer', 'External Auditor', 'Outsourced Provider'].map(role => (
                     <label key={role} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                       <input type="checkbox" checked={effortData[step.code]?.roles?.includes(role) || false} onChange={() => {
