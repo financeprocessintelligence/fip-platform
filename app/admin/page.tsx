@@ -126,16 +126,25 @@ export default function AdminPage() {
   const handleUnlock = async (userId: string, processName: string, key: string) => {
     setUnlocking(key)
     const current = profiles[userId] || []
-    if (current.includes(processName)) { setUnlocking(null); setUnlockSuccess(key); setTimeout(() => setUnlockSuccess(null), 3000); return }
+    if (current.includes(processName)) {
+      setUnlocking(null)
+      return
+    }
     const updated = [...current, processName]
-    const { error } = await supabase.from('profiles').upsert({ id: userId, unlocked_processes: updated, updated_at: new Date().toISOString() }, { onConflict: 'id' })
+    const { error } = await supabase.from('profiles').upsert({ 
+      id: userId, 
+      unlocked_processes: updated
+    }, { onConflict: 'id' })
     if (!error) {
       setProfiles(prev => ({ ...prev, [userId]: updated }))
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, unlocked_processes: updated } : u))
+      setUnlockSuccess(key)
+      setTimeout(() => setUnlockSuccess(null), 3000)
+    } else {
+      console.error('Unlock error:', error)
+      alert('Failed to unlock. Please try again.')
     }
     setUnlocking(null)
-    setUnlockSuccess(key)
-    setTimeout(() => setUnlockSuccess(null), 3000)
   }
 
   const formatDate = (dateStr: string) => {
