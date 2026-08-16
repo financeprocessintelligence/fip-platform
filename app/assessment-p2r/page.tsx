@@ -184,6 +184,7 @@ function AssessmentP2RPage() {
   const [effortData, setEffortData] = useState<Record<string, { headcount: number; roles: string[]; hoursPerCycle: number; comments: string }>>({})
   const [showReview, setShowReview] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [loadingResponses, setLoadingResponses] = useState(true)
 
   useEffect(() => {
