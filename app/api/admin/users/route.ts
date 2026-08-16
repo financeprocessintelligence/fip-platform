@@ -16,7 +16,12 @@ export async function GET() {
       .from('assessments')
       .select('user_id, process_name, score, updated_at')
 
-    return NextResponse.json({ success: true, users, assessments })
+    const { data: leads } = await supabaseAdmin
+      .from('leads')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    return NextResponse.json({ success: true, users, assessments, leads })
   } catch (error) {
     console.error('Admin API error:', error)
     return NextResponse.json({ success: false, error: 'Failed to fetch admin data' }, { status: 500 })
