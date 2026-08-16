@@ -642,10 +642,9 @@ const handleExportExcel = () => {
       </div>
     </div>
     </>
-  )
+
 }
   )
-}
 export default function AssessmentR2RPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
