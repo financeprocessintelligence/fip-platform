@@ -641,7 +641,6 @@ const handleExportExcel = () => {
         )}
       </div>
     </div>
-    </div>
     </>
   )
 }
