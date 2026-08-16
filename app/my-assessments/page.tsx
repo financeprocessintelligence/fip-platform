@@ -594,7 +594,7 @@ if (!isToolOrEffort) currentStepCode = stepCode
                 <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Your Assessments</h2>
                 {processSummaries.map((p, i) => (
                   <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '16px', borderLeft: `4px solid ${p.status === 'completed' ? '#1d9e75' : '#f97316'}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                           <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e' }}>{p.processName}</h3>
