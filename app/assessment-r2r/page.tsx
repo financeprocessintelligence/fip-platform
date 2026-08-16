@@ -417,7 +417,7 @@ const handleExportExcel = () => {
         .as-sidebar { transform: translateX(-100%); position: fixed !important; z-index: 200; height: 100vh; transition: transform 0.3s; overflow-y: auto; }
         .as-sidebar.open { transform: translateX(0); }
         .as-topbar { display: flex !important; }
-        .as-grid { grid-template-columns: 1fr !important; }
+        .as-grid { grid-template-columns: 1fr !important; width: 100% !important; }
       }
       @media (min-width: 769px) {
         .as-topbar { display: none !important; }
@@ -534,7 +534,7 @@ const handleExportExcel = () => {
           <p style={{ color: '#666', fontSize: '14px' }}>{step.description}</p>
         </div>
 
-        <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
           <div className="as-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
             {step.l3s.map(l3 => (
               <div key={l3.code} style={{ background: 'white', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
