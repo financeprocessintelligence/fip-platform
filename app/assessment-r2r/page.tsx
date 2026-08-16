@@ -188,6 +188,7 @@ function AssessmentR2RPageInner() {
   const [toolAnswers, setToolAnswers] = useState<ToolAnswers>({})
   const [effortData, setEffortData] = useState<Record<string, { headcount: number; roles: string[]; hoursPerCycle: number; comments: string }>>({})
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [loadingResponses, setLoadingResponses] = useState(true)
   
