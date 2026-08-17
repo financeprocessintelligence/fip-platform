@@ -489,7 +489,7 @@ function AssessmentP2RPage() {
             <div className="as-topbar" style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#0F4C81' }}>
   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
     <div style={{ width: '30px', height: '30px', background: '#4fa3e0', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px', color: 'white' }}>FPI</div>
-    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>Record to Report</span>
+    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>Project to Result</span>
   </div>
   <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer' }}>☰</button>
 </div>
