@@ -535,7 +535,7 @@ const handleExportExcel = () => {
         </div>
 
         <div style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
-          <div className="as-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+          <div className="as-grid" style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
             {step.l3s.map(l3 => (
               <div key={l3.code} style={{ background: 'white', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                 <div style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '700', marginBottom: '4px' }}>{l3.code}</div>

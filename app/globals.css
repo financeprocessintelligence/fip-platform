@@ -27,6 +27,10 @@ body {
 @media (max-width: 768px) {
   .as-grid {
     grid-template-columns: 1fr !important;
+    display: grid !important;
+  }
+  div.as-grid {
+    grid-template-columns: 1fr !important;
   }
   .as-sidebar {
     transform: translateX(-100%);
