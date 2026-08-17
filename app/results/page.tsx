@@ -1,6 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import RecommendationChat from '../../components/RecommendationChat'
@@ -331,8 +333,10 @@ function ConsultantModal({ onClose, processName, overallScore }: { onClose: () =
   )
 }
 
-export default function ResultsPage() {
+function ResultsPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const viewingUserId = searchParams.get('userId')
   const [activeTab, setActiveTab] = useState('overview')
   const [viewMode, setViewMode] = useState<'grid' | 'spider'>('grid')
   const [hoveredCode, setHoveredCode] = useState<string | null>(null)
@@ -369,7 +373,7 @@ export default function ResultsPage() {
         (profileData?.unlocked_processes || []).includes('Plan to Perform')
       setIsUnlocked(unlocked)
 
-      const { data, error } = await supabase.from('assessments').select('*').eq('user_id', user.id).eq('process_name', 'Plan to Perform')
+      const { data, error } = await supabase.from('assessments').select('*').eq('user_id', targetUserId).eq('process_name', 'Plan to Perform')
       if (error || !data) { setLoading(false); return }
       const rows = data as AssessmentRow[]
       const results: L2Result[] = stepDefinitions.map(step => {
@@ -382,7 +386,7 @@ export default function ResultsPage() {
       setL2Results(results)
       setLoading(false)
 
-      const effortResult = await supabase.from('process_effort').select('*').eq('user_id', user.id).eq('process_name', 'Plan to Perform')
+      const effortResult = await supabase.from('process_effort').select('*').eq('user_id', targetUserId).eq('process_name', 'Plan to Perform')
       const effortData = effortResult.data || []
       const roiRow = effortData.find((r: any) => r.step_code === 'roi_settings')
       const loadedHourlyRate = roiRow?.hourly_rate || 0
@@ -455,7 +459,7 @@ export default function ResultsPage() {
 
   return (
     <div id="results-content" style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
-      <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
+      <div style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
         <div style={{ fontSize: '12px', color: '#4fa3e0', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Finance Process Maturity Assessment</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
@@ -463,12 +467,12 @@ export default function ResultsPage() {
             <p style={{ color: '#a0c4e8', fontSize: '14px' }}>Finance Process Intelligence Platform · Assessment completed today · Confidential</p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            {isUnlocked && <button className="res-pdfbtn" onClick={() => router.push('/results-ptp-print')} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>}
-           <button className="res-excelbtn" style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>⬇ Export to Excel</button>
+            {isUnlocked && <button onClick={handleDownloadPDF} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>}
+            <button style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>⬇ Export to Excel</button>
             <button onClick={() => router.push('/dashboard')} style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>← Dashboard</button>
           </div>
         </div>
-        <div className="res-scorecards" style={{ display: 'flex', gap: '24px', marginTop: '28px' }}>
+        <div style={{ display: 'flex', gap: '24px', marginTop: '28px' }}>
           <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 28px', textAlign: 'center', minWidth: '120px' }}>
             <div style={{ fontSize: '42px', fontWeight: 'bold', color: getLevelColor(getLevel(overallScore)) }}>{overallScore}</div>
             <div style={{ fontSize: '12px', color: '#a0c4e8', marginTop: '4px' }}>Overall Score</div>
@@ -500,16 +504,16 @@ export default function ResultsPage() {
         </div>
       </div>
 
-      <div className="res-tabs" style={{ background: 'white', borderBottom: '1px solid #e0e4ea', padding: '0 40px', display: 'flex' }}>
+      <div style={{ background: 'white', borderBottom: '1px solid #e0e4ea', padding: '0 40px', display: 'flex' }}>
         {['overview', 'l2breakdown', 'effort', 'aiinsights', 'recommendations'].map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className="res-tab" style={{ padding: '14px 20px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? '700' : '400', color: activeTab === tab ? '#0F4C81' : '#666', borderBottom: activeTab === tab ? '2px solid #0F4C81' : '2px solid transparent', cursor: 'pointer', position: 'relative' }}>
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '14px 20px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? '700' : '400', color: activeTab === tab ? '#0F4C81' : '#666', borderBottom: activeTab === tab ? '2px solid #0F4C81' : '2px solid transparent', cursor: 'pointer', position: 'relative' }}>
             {tab === 'overview' ? 'Overview' : tab === 'l2breakdown' ? 'L3 Breakdown' : tab === 'aiinsights' ? 'AI Insights' : tab === 'recommendations' ? 'Recommendations' : '👥 Effort & ROI'}
             {!isUnlocked && tab !== 'overview' && <span style={{ marginLeft: '4px', fontSize: '11px' }}>🔒</span>}
           </button>
         ))}
       </div>
 
-      <div className="res-content" style={{ padding: '32px 40px' }}>
+      <div style={{ padding: '32px 40px' }}>
         {activeTab === 'overview' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -524,7 +528,7 @@ export default function ResultsPage() {
             </div>
 
             {viewMode === 'grid' ? (
-              <div className="res-grid" style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px', position: 'relative' }}>
+              <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px', position: 'relative' }}>
                 {hoveredResult && isUnlocked && (
                   <div style={{ position: 'fixed', left: tooltipPos.x + 12, top: tooltipPos.y - 40, background: '#0F2744', color: 'white', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', zIndex: 100, pointerEvents: 'none', maxWidth: '260px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
                     <div style={{ fontWeight: '700', marginBottom: '4px' }}>{hoveredResult.code} — {hoveredResult.name}</div>
@@ -592,7 +596,7 @@ export default function ResultsPage() {
               </div>
             )}
 
-            <div className="res-findings" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
               {keyFindings.map((f, i) => (
                 <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                   <span style={{ fontSize: '20px' }}>{f.type === 'strength' ? '💪' : f.type === 'gap' ? '⚠️' : '💡'}</span>
@@ -656,7 +660,7 @@ export default function ResultsPage() {
           isUnlocked ? (
             <div>
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '20px' }}>L3 Breakdown by L2 Process</h3>
-              <div className="res-l2grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {l2Results.map(r => (
                   <div key={r.code} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -779,17 +783,17 @@ export default function ResultsPage() {
                 <>
                   <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
                     <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Effort by Process Step</h4>
-                    <div className="res-effort-table"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '500px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                       <thead><tr style={{ background: '#f4f6f9' }}>{['Step', 'People', 'Hours/Cycle', 'Key Roles', 'Comments'].map(h => (<th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#666', textTransform: 'uppercase' }}>{h}</th>))}</tr></thead>
                       <tbody>{effortRows.map((row, i) => (<tr key={i} style={{ borderTop: '1px solid #f0f0f0' }}><td style={{ padding: '10px 12px', fontWeight: '600', color: '#1a1a2e' }}>{row.step_code} {row.step_name}</td><td style={{ padding: '10px 12px', color: '#555' }}>{row.headcount || '-'}</td><td style={{ padding: '10px 12px', color: '#555' }}>{row.hours_per_cycle || '-'}</td><td style={{ padding: '10px 12px', color: '#555' }}>{(row.roles || []).slice(0, 2).join(', ')}{row.roles?.length > 2 ? ` +${row.roles.length - 2} more` : ''}</td><td style={{ padding: '10px 12px', color: '#555', fontSize: '12px' }}>{row.comments || '-'}</td></tr>))}</tbody>
-                    </table></div>
+                    </table>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
                     {[{ label: 'Total People', value: effortRows.reduce((sum, r) => sum + (r.headcount || 0), 0).toString(), color: '#0F4C81' }, { label: 'Total Hours/Cycle', value: effortRows.reduce((sum, r) => sum + (r.hours_per_cycle || 0), 0).toString(), color: '#f97316' }, { label: 'Steps with Data', value: effortRows.length.toString(), color: '#1d9e75' }].map(s => (<div key={s.label} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', textAlign: 'center' }}><div style={{ fontSize: '32px', fontWeight: 'bold', color: s.color }}>{s.value}</div><div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>{s.label}</div></div>))}
                   </div>
                   <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
                     <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>💰 ROI Calculator</h4>
-                    <div className="res-findings" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                       <div><div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Average hourly cost per person (£)</div><input type="number" min="0" placeholder="e.g. 75" value={hourlyRate || ''} onChange={e => { const val = parseInt(e.target.value) || 0; setHourlyRate(val); saveROISettings(val, savingPercent) }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', color: '#333' }} /></div>
                       <div><div style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>Expected time saving from transformation (%)</div><input type="number" min="0" max="100" placeholder="e.g. 30" value={savingPercent || ''} onChange={e => { const val = parseInt(e.target.value) || 0; setSavingPercent(val); saveROISettings(hourlyRate, val) }} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', width: '100%', color: '#333' }} /></div>
                     </div>
@@ -831,5 +835,13 @@ export default function ResultsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}><div>Loading...</div></div>}>
+      <ResultsPageInner />
+    </Suspense>
   )
 }

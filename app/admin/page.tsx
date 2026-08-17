@@ -397,7 +397,7 @@ export default function AdminPage() {
         {activeTab === 'assessments' && (
           <div>
             <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e', marginBottom: '20px' }}>All Assessments</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
               {users.filter(u => u.assessments.length > 0).map((u, i) => (
                 <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
@@ -409,15 +409,19 @@ export default function AdminPage() {
                       <div style={{ fontSize: '12px', color: '#666' }}>{u.org_name || 'No org'} · {u.industry || 'No industry'}</div>
                     </div>
                   </div>
-                  {u.assessments.map((a, j) => (
+                  {u.assessments.map((a, j) => {
+                    const resultPath = a.processName === 'Record to Report' ? 'results-r2r' : a.processName === 'Procure to Pay' ? 'results-ptp' : a.processName === 'Project to Result' ? 'results-p2r' : 'results'
+                    return (
                     <div key={j} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#f4f6f9', borderRadius: '6px', marginBottom: '6px' }}>
                       <span style={{ fontSize: '13px', color: '#444' }}>{a.processName}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '700', background: getLevelColor(getLevel(a.score)), color: 'white' }}>{getLevel(a.score)}</span>
                         <span style={{ fontSize: '14px', fontWeight: '700', color: getLevelColor(getLevel(a.score)) }}>{a.score}</span>
+                        <button onClick={() => router.push(`/${resultPath}?userId=${u.id}`)} style={{ padding: '3px 10px', background: '#0F4C81', color: 'white', border: 'none', borderRadius: '5px', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>View Results</button>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ))}
               {users.filter(u => u.assessments.length > 0).length === 0 && (
