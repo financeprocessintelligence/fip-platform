@@ -779,10 +779,10 @@ export default function ResultsPage() {
                 <>
                   <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
                     <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e', marginBottom: '16px' }}>Effort by Process Step</h4>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <div className="res-effort-table"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '500px' }}>
                       <thead><tr style={{ background: '#f4f6f9' }}>{['Step', 'People', 'Hours/Cycle', 'Key Roles', 'Comments'].map(h => (<th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#666', textTransform: 'uppercase' }}>{h}</th>))}</tr></thead>
                       <tbody>{effortRows.map((row, i) => (<tr key={i} style={{ borderTop: '1px solid #f0f0f0' }}><td style={{ padding: '10px 12px', fontWeight: '600', color: '#1a1a2e' }}>{row.step_code} {row.step_name}</td><td style={{ padding: '10px 12px', color: '#555' }}>{row.headcount || '-'}</td><td style={{ padding: '10px 12px', color: '#555' }}>{row.hours_per_cycle || '-'}</td><td style={{ padding: '10px 12px', color: '#555' }}>{(row.roles || []).slice(0, 2).join(', ')}{row.roles?.length > 2 ? ` +${row.roles.length - 2} more` : ''}</td><td style={{ padding: '10px 12px', color: '#555', fontSize: '12px' }}>{row.comments || '-'}</td></tr>))}</tbody>
-                    </table>
+                    </table></div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
                     {[{ label: 'Total People', value: effortRows.reduce((sum, r) => sum + (r.headcount || 0), 0).toString(), color: '#0F4C81' }, { label: 'Total Hours/Cycle', value: effortRows.reduce((sum, r) => sum + (r.hours_per_cycle || 0), 0).toString(), color: '#f97316' }, { label: 'Steps with Data', value: effortRows.length.toString(), color: '#1d9e75' }].map(s => (<div key={s.label} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', textAlign: 'center' }}><div style={{ fontSize: '32px', fontWeight: 'bold', color: s.color }}>{s.value}</div><div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>{s.label}</div></div>))}

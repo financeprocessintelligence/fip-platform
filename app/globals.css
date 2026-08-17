@@ -107,6 +107,7 @@ body {
 .res-stats { grid-template-columns: 1fr !important; }
 .res-roigrid { grid-template-columns: 1fr !important; }
 .res-headerbtns { display: none !important; }
+.res-effort-table { overflow-x: auto !important; display: block !important; }
 }
 @media (min-width: 769px) {
   .as-topbar { display: none !important; }
