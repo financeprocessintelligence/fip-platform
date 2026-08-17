@@ -413,7 +413,7 @@ function ResultsPageInner() {
       }
     }
     fetchResults()
-  }, [router])
+  }, [router, viewingUserId])
 
   const saveROISettings = async (rate: number, percent: number) => {
     const { data: { user } } = await supabase.auth.getUser()
