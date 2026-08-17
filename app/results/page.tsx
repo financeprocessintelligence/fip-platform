@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { useState, useEffect, useRef } from 'react'
@@ -361,8 +361,7 @@ function ResultsPageInner() {
     const fetchResults = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
-      const params = new URLSearchParams(window.location.search)
-      const viewUserId = params.get('userId') || user.id
+      const targetId = viewingUserId || user.id
 
       // Check unlock status
       const { data: profileData } = await supabase
@@ -375,7 +374,7 @@ function ResultsPageInner() {
         (profileData?.unlocked_processes || []).includes('Plan to Perform')
       setIsUnlocked(unlocked)
 
-      const { data, error } = await supabase.from('assessments').select('*').eq('user_id', viewUserId).eq('process_name', 'Plan to Perform')
+      const { data, error } = await supabase.from('assessments').select('*').eq('user_id', targetId).eq('process_name', 'Plan to Perform')
       if (error || !data) { setLoading(false); return }
       const rows = data as AssessmentRow[]
       const results: L2Result[] = stepDefinitions.map(step => {
@@ -388,7 +387,7 @@ function ResultsPageInner() {
       setL2Results(results)
       setLoading(false)
 
-      const effortResult = await supabase.from('process_effort').select('*').eq('user_id', viewUserId).eq('process_name', 'Plan to Perform')
+      const effortResult = await supabase.from('process_effort').select('*').eq('user_id', targetId).eq('process_name', 'Plan to Perform')
       const effortData = effortResult.data || []
       const roiRow = effortData.find((r: any) => r.step_code === 'roi_settings')
       const loadedHourlyRate = roiRow?.hourly_rate || 0
