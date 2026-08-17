@@ -92,9 +92,15 @@ body {
     grid-template-columns: 1fr 1fr !important;
     gap: 12px !important;
   }
+  .pe-columns { flex-direction: column !important; }
+  .pe-group { flex: none !important; width: 100% !important; }
+  .pe-topbar { display: flex !important; }
+  .pe-sidebar { transform: translateX(-100%); position: fixed !important; z-index: 200; height: 100vh; transition: transform 0.3s; overflow-y: auto; }
+  .pe-sidebar.open { transform: translateX(0); }
 }
 @media (min-width: 769px) {
   .as-topbar { display: none !important; }
   .ma-topbar { display: none !important; }
   .dash-topbar { display: none !important; }
+  .pe-topbar { display: none !important; }
 }

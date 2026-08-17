@@ -102,6 +102,15 @@ export default function ProcessExplorer() {
   const router = useRouter()
   const [selected, setSelected] = useState('Plan to Perform')
   const [industry, setIndustry] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+const [isMobile, setIsMobile] = useState(false)
+
+useEffect(() => {
+  const checkMobile = () => setIsMobile(window.innerWidth <= 768)
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+  return () => window.removeEventListener('resize', checkMobile)
+}, [])
 
   useEffect(() => {
     const getUser = async () => {
@@ -121,9 +130,24 @@ export default function ProcessExplorer() {
   }, {} as Record<string, typeof current.columns>)
 
   return (
+    <>
+    <style>{`
+      @media (max-width: 768px) {
+        .pe-sidebar { transform: translateX(-100%); position: fixed !important; z-index: 200; height: 100vh; transition: transform 0.3s; overflow-y: auto; }
+        .pe-sidebar.open { transform: translateX(0); }
+        .pe-topbar { display: flex !important; }
+        .pe-main { padding: 16px !important; }
+        .pe-columns { flex-direction: column !important; overflow-x: visible !important; }
+        .pe-column { min-width: 100% !important; width: 100% !important; }
+      }
+      @media (min-width: 769px) {
+        .pe-topbar { display: none !important; }
+      }
+    `}</style>
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} />}
       {/* Sidebar */}
-      <div style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0 }}>
+      <div className={`pe-sidebar${sidebarOpen ? ' open' : ''}`} style={{ width: '240px', background: '#0F4C81', color: 'white', padding: '24px 16px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <div style={{ width: '36px', height: '36px', background: '#4fa3e0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>FPI</div>
           <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Finance Process</span>
@@ -143,7 +167,14 @@ export default function ProcessExplorer() {
       </div>
 
       {/* Main */}
-      <div style={{ flex: 1, background: '#f4f6f9', padding: '24px', overflowX: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div className="pe-main" style={{ flex: 1, background: '#f4f6f9', padding: '24px', overflowX: 'auto', display: 'flex', flexDirection: 'column' }}>
+  <div className="pe-topbar" style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#0F4C81', borderRadius: '8px', marginBottom: '16px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ width: '30px', height: '30px', background: '#4fa3e0', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px', color: 'white' }}>FPI</div>
+      <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>Process Explorer</span>
+    </div>
+    <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer' }}>☰</button>
+  </div>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexShrink: 0 }}>
           <div>
@@ -165,9 +196,9 @@ export default function ProcessExplorer() {
         </div>
 
         {/* Column Table */}
-        <div style={{ display: 'flex', gap: '0', flexShrink: 0 }}>
+        <div className="pe-columns" style={{ display: 'flex', gap: '0', flexShrink: 0 }}>
           {Object.entries(groups).map(([groupName, cols]) => (
-            <div key={groupName} style={{ display: 'flex', flexDirection: 'column', flex: cols.length }}>
+            <div key={groupName} className="pe-group" style={{ display: 'flex', flexDirection: 'column', flex: cols.length }}>
               <div style={{ background: groupColors[groupName] || '#0F2744', color: 'white', padding: '10px 14px', fontSize: '11px', fontWeight: '700', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
                 {groupName}
               </div>
