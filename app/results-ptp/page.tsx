@@ -216,7 +216,7 @@ export default function ResultsPtPPage() {
 
   return (
     <div style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
-      <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}> padding: '32px 40px' }}> style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
+      <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
         <div style={{ fontSize: '12px', color: '#4fa3e0', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Finance Process Maturity Assessment</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div><h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '6px' }}>Procure to Pay — Maturity Report</h1><p style={{ color: '#a0c4e8', fontSize: '14px' }}>Finance Process Intelligence Platform · Assessment completed today · Confidential</p></div>
@@ -243,7 +243,7 @@ export default function ResultsPtPPage() {
         ))}
       </div>
 
-      <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}> padding: '32px 40px' }}>
+      <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
         {activeTab === 'overview' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
