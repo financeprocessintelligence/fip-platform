@@ -462,9 +462,9 @@ export default function ResultsPage() {
             <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '6px' }}>Plan to Perform — Maturity Report</h1>
             <p style={{ color: '#a0c4e8', fontSize: '14px' }}>Finance Process Intelligence Platform · Assessment completed today · Confidential</p>
           </div>
-          <div className="res-headerbtns" style={{ display: 'flex', gap: '10px' }}>
-            {isUnlocked && <button onClick={handleDownloadPDF} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>}
-            <button style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>⬇ Export to Excel</button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {isUnlocked && <button className="res-pdfbtn" onClick={() => router.push('/results-ptp-print')} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>}
+           <button className="res-excelbtn" style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>⬇ Export to Excel</button>
             <button onClick={() => router.push('/dashboard')} style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>← Dashboard</button>
           </div>
         </div>

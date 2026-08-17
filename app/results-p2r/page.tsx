@@ -214,17 +214,17 @@ export default function ResultsP2RPage() {
 
   return (
     <div style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
-      <div style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
+      <div style={{ background: '#0F2744', color: 'white', <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
         <div style={{ fontSize: '12px', color: '#4fa3e0', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Finance Process Maturity Assessment</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div><h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '6px' }}>Project to Result — Maturity Report</h1><p style={{ color: '#a0c4e8', fontSize: '14px' }}>Finance Process Intelligence Platform · Assessment completed today · Confidential</p></div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            {isUnlocked && <button onClick={() => router.push('/results-p2r-print')} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>}
-            <button style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>⬇ Export to Excel</button>
+           {isUnlocked && <button className="res-pdfbtn" onClick={() => router.push('/results-ptp-print')} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>}
+            <button className="res-excelbtn" style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>⬇ Export to Excel</button>
             <button onClick={() => router.push('/dashboard')} style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>← Dashboard</button>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '24px', marginTop: '28px' }}>
+        <div style={{ display: 'flex', gap: '24px', marginTop: '28px' }} className="res-scorecards">
           <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 28px', textAlign: 'center', minWidth: '120px' }}><div style={{ fontSize: '42px', fontWeight: 'bold', color: getLevelColor(getLevel(overallScore)) }}>{overallScore}</div><div style={{ fontSize: '12px', color: '#a0c4e8', marginTop: '4px' }}>Overall Score</div><div style={{ fontSize: '14px', fontWeight: '700', color: getLevelColor(getLevel(overallScore)), marginTop: '4px' }}>{getLevel(overallScore)}</div></div>
           {strongest && (<div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 28px', flex: 1 }}><div style={{ fontSize: '11px', color: '#4fa3e0', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Strongest Process</div><div style={{ fontSize: '16px', fontWeight: '700', color: 'white' }}>{strongest.name}</div><div style={{ fontSize: '13px', color: '#a0c4e8', marginTop: '2px' }}>Score: {strongest.score} — {strongest.level}</div></div>)}
           {weakest && (<div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 28px', flex: 1 }}><div style={{ fontSize: '11px', color: '#f97316', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Priority Focus Area</div><div style={{ fontSize: '16px', fontWeight: '700', color: 'white' }}>{weakest.name}</div><div style={{ fontSize: '13px', color: '#a0c4e8', marginTop: '2px' }}>Score: {weakest.score} — {weakest.level}</div></div>)}
@@ -232,7 +232,7 @@ export default function ResultsP2RPage() {
         </div>
       </div>
 
-      <div style={{ background: 'white', borderBottom: '1px solid #e0e4ea', padding: '0 40px', display: 'flex' }}>
+      <div style={{ background: 'white', borderBottom: '1px solid #e0e4ea', padding: '0 40px', display: 'flex' }} className="res-tabs">
         {['overview', 'l2breakdown', 'effort', 'aiinsights', 'recommendations'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '14px 20px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? '700' : '400', color: activeTab === tab ? '#0F4C81' : '#666', borderBottom: activeTab === tab ? '2px solid #0F4C81' : '2px solid transparent', cursor: 'pointer' }}>
             {tab === 'overview' ? 'Overview' : tab === 'l2breakdown' ? 'L3 Breakdown' : tab === 'effort' ? '👥 Effort & ROI' : tab === 'aiinsights' ? 'AI Insights' : 'Recommendations'}
@@ -241,7 +241,7 @@ export default function ResultsP2RPage() {
         ))}
       </div>
 
-      <div style={{ padding: '32px 40px' }}>
+      <div style={{ <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
         {activeTab === 'overview' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>

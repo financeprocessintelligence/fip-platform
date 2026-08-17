@@ -226,17 +226,17 @@ export default function ResultsR2RPage() {
 
   return (
     <div style={{ minHeight: '100vh', fontFamily: 'sans-serif', background: '#f4f6f9' }}>
-      <div style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
+      <div style={{ background: '#0F2744', color: 'white', <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
         <div style={{ fontSize: '12px', color: '#1d9e75', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Finance Process Maturity Assessment</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div><h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '6px' }}>Record to Report — Maturity Report</h1><p style={{ color: '#a0c4e8', fontSize: '14px' }}>Finance Process Intelligence Platform · Assessment completed today · Confidential</p></div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            {isUnlocked && <button onClick={() => router.push('/results-r2r-print')} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>}
-            <button style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>⬇ Export to Excel</button>
+           {isUnlocked && <button className="res-pdfbtn" onClick={() => router.push('/results-ptp-print')} style={{ padding: '9px 16px', background: '#1d9e75', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>⬇ Download PDF Report</button>}
+            <button className="res-excelbtn" style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>⬇ Export to Excel</button>
             <button onClick={() => router.push('/dashboard')} style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>← Dashboard</button>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginTop: '28px' }}>
+        <div className="res-scorecards" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginTop: '28px' }}>
           {[{ label: 'OVERALL MATURITY SCORE', value: overallScore.toString(), sub: 'out of 5.0', highlight: '#1d9e75' }, { label: 'STRONGEST L2 PROCESS', value: strongest?.score.toFixed(1) || '-', sub: strongest?.name || '-', highlight: '#eab308' }, { label: 'WEAKEST L2 PROCESS', value: weakest?.score.toFixed(1) || '-', sub: weakest?.name || '-', highlight: '#ef4444' }, { label: 'L2 PROCESSES ASSESSED', value: `${l2Results.filter(r => r.score > 0).length}`, sub: `of ${l2Results.length} completed`, highlight: '#4fa3e0' }, { label: 'L3 ACTIVITIES COVERED', value: `${l2Results.reduce((sum, r) => sum + r.l3s.filter(l => l.score > 0).length, 0)}`, sub: 'activities assessed', highlight: '#4fa3e0' }].map(s => (
             <div key={s.label} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '8px', padding: '16px' }}><div style={{ fontSize: '10px', color: '#a0c4e8', letterSpacing: '0.06em', marginBottom: '8px' }}>{s.label}</div><div style={{ fontSize: '32px', fontWeight: 'bold', color: s.highlight, lineHeight: 1 }}>{s.value}</div><div style={{ fontSize: '12px', color: '#7db3e8', marginTop: '4px' }}>{s.sub}</div></div>
           ))}
@@ -249,7 +249,7 @@ export default function ResultsR2RPage() {
         )}
       </div>
 
-      <div style={{ background: 'white', borderBottom: '1px solid #e0e4ea', padding: '0 40px', display: 'flex' }}>
+      <div className="res-tabs" style={{ background: 'white', borderBottom: '1px solid #e0e4ea', padding: '0 40px', display: 'flex' }}>
         {['overview', 'l2breakdown', 'effort', 'aiinsights', 'recommendations'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '14px 20px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? '700' : '400', color: activeTab === tab ? '#0F4C81' : '#666', borderBottom: activeTab === tab ? '2px solid #0F4C81' : '2px solid transparent', cursor: 'pointer' }}>
             {tab === 'overview' ? 'Overview' : tab === 'l2breakdown' ? 'L3 Breakdown' : tab === 'effort' ? '👥 Effort & ROI' : tab === 'aiinsights' ? 'AI Insights' : 'Recommendations'}
@@ -258,7 +258,7 @@ export default function ResultsR2RPage() {
         ))}
       </div>
 
-      <div style={{ padding: '32px 40px' }}>
+      <div style={{ <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
         {activeTab === 'overview' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
