@@ -468,7 +468,7 @@ export default function ResultsPage() {
             <button onClick={() => router.push('/dashboard')} style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>← Dashboard</button>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '24px', marginTop: '28px' }}>
+        <div className="res-scorecards" style={{ display: 'flex', gap: '24px', marginTop: '28px' }}>
           <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 28px', textAlign: 'center', minWidth: '120px' }}>
             <div style={{ fontSize: '42px', fontWeight: 'bold', color: getLevelColor(getLevel(overallScore)) }}>{overallScore}</div>
             <div style={{ fontSize: '12px', color: '#a0c4e8', marginTop: '4px' }}>Overall Score</div>

@@ -108,6 +108,8 @@ body {
 .res-roigrid { grid-template-columns: 1fr !important; }
 .res-headerbtns { display: none !important; }
 .res-effort-table { overflow-x: auto !important; display: block !important; }
+.res-scorecards { flex-direction: column !important; gap: 12px !important; }
+.res-scorecard { min-width: 100% !important; }
 }
 @media (min-width: 769px) {
   .as-topbar { display: none !important; }
