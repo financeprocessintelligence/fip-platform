@@ -243,8 +243,7 @@ export default function ResultsPtPPage() {
         ))}
       </div>
 
-      <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
-        {activeTab === 'overview' && (
+      <div style={{ padding: '32px 40px', background: '#f4f6f9' }}> (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div><h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a2e' }}>{viewMode === 'grid' ? 'Capability Maturity Grid — Procure to Pay' : 'Maturity Spider Chart — Procure to Pay'}</h2><p style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>Hover over each dot to see the detailed maturity narrative</p></div>
