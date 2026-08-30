@@ -317,7 +317,7 @@ function AssessmentPtPPage() {
     }
 
     for (const row of rows) {
-      await supabase.from('assessments').upsert(row, { onConflict: 'user_id,l3_code' })
+      await supabase.from('assessments').upsert(row, { onConflict: 'user_id,process_name,l3_code' })
     }
 
     for (const s of steps) {
