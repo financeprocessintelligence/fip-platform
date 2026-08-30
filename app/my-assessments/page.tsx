@@ -129,7 +129,7 @@ setR2rEffort(r2rEffortMap)
 
       const summaries: ProcessSummary[] = Object.entries(processMap).map(([processName, assessments]) => {
         const scoredRows = assessments.filter(a => a.score !== null)
-        const uniqueSteps = [...new Set(assessments.map(a => a.step_code))]
+        const uniqueSteps = [...new Set(assessments.filter(a => a.step_code !== 'TOOL').map(a => a.step_code))]
         const processConfig = availableProcesses.find(p => p.name === processName)
         const totalSteps = processConfig?.totalSteps || 7
         const averageScore = scoredRows.length > 0
