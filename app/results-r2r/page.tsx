@@ -258,7 +258,7 @@ export default function ResultsR2RPage() {
         ))}
       </div>
 
-      <div className="res-header" style={{ background: '#0F2744', color: 'white', padding: '32px 40px' }}>
+      <div style={{ padding: '32px 40px', background: '#f4f6f9' }}>
         {activeTab === 'overview' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
