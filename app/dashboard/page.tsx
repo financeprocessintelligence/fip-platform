@@ -93,21 +93,18 @@ export default function Dashboard() {
             </div>
             <p style={{ fontSize: '11px', color: '#a0c4e8', marginLeft: '46px' }}>Intelligence Platform</p>
           </div>
-          <nav>
-            <div style={{ marginTop: 'auto', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
-  <div style={{ fontSize: '10px', color: '#7db3e8', marginBottom: '8px', letterSpacing: '0.06em' }}>DELIVERED BY</div>
-  <img src="/images/arpero-logo-white.png" alt="Arpero" style={{ height: '70px', width: 'auto', maxWidth: '160px' }} />
-</div>
-              <div key={item} onClick={() => handleNav(item)} style={{ padding: '10px 12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', background: item === 'Dashboard' ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
-                {item}
-              </div>
-            ))}
-          </nav>
-          <div style={{ marginTop: 'auto', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
-            <div style={{ fontSize: '10px', color: '#7db3e8', marginBottom: '8px', letterSpacing: '0.06em' }}>DELIVERED BY</div>
-            <img src="/images/arpero-logo-white.png" alt="Arpero" style={{ height: '70px', width: 'auto', maxWidth: '160px' }} />
-          </div>
+        <nav>
+          {navItems.map(item => (
+            <div key={item} onClick={() => handleNav(item)} style={{ padding: '10px 12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', background: item === 'Dashboard' ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
+              {item}
+            </div>
+          ))}
+        </nav>
+        <div style={{ marginTop: 'auto', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+          <div style={{ fontSize: '10px', color: '#7db3e8', marginBottom: '8px', letterSpacing: '0.06em' }}>DELIVERED BY</div>
+          <img src="/images/arpero-logo-white.png" alt="Arpero" style={{ height: '70px', width: 'auto', maxWidth: '160px' }} />
         </div>
+      </div>
 
         {/* Main Content */}
         <div className="dash-main" style={{ flex: 1, background: '#f4f6f9', padding: '32px', overflowX: 'hidden' }}>
