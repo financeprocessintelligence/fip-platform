@@ -76,7 +76,7 @@ export default function Home() {
             </div>
           </div>
           <div className="fpi-copyright" style={{ marginTop: '48px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-  <img src="/images/arpero-logo-white.png" alt="Arpero" style={{ height: '32px', width: 'auto', opacity: 0.85 }} />
+  <img src="/images/arpero-logo-white.png" alt="Arpero" style={{ height: '48px', width: 'auto', maxWidth: '160px', opacity: 0.85 }} />
   <p style={{ color: '#4a6a8a', fontSize: '12px', margin: 0 }}>© 2026 Finance Process Intelligence. All rights reserved.</p>
 </div>
         </div>
