@@ -103,6 +103,10 @@ export default function Dashboard() {
               </div>
             ))}
           </nav>
+          <div style={{ marginTop: 'auto', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+            <div style={{ fontSize: '10px', color: '#7db3e8', marginBottom: '8px', letterSpacing: '0.06em' }}>DELIVERED BY</div>
+            <img src="/images/arpero-logo-white.png" alt="Arpero" style={{ height: '70px', width: 'auto', maxWidth: '160px' }} />
+          </div>
         </div>
 
         {/* Main Content */}
