@@ -138,7 +138,7 @@ export default function Dashboard() {
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a1a2e', marginBottom: '16px' }}>Finance Process Taxonomy</h2>
           <div className="dash-processes" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
             {processes.map(p => (
-              <div key={p.code} onClick={() => p.available && router.push(p.code === 'PtP' ? '/assessment-ptp' : p.code === 'P2R' ? '/assessment-p2r' : p.code === 'R2R' ? '/assessment-r2r' : '/assessment')} style={{
+              <div key={p.code} onClick={() => p.available && router.push(`/process-explorer?process=${encodeURIComponent(p.name)}`)} style={{
                 background: p.available ? 'white' : '#f0f0f0',
                 borderRadius: '8px', padding: '16px',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
