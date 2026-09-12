@@ -616,12 +616,12 @@ function ResultsPageInner() {
                 {showBenchmarkInfo && (
                   <div style={{ marginTop: '12px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     <p style={{ fontSize: '13px', color: '#444', lineHeight: '1.7', marginBottom: '12px' }}>
-                      Benchmarks are derived from FPI's proprietary Finance Maturity Index, combining primary research across 200+ Finance functions and secondary analysis of industry performance data. Peer groups are segmented by industry and organisational scale.
+                      These indicative benchmarks are drawn from Arpero's Finance transformation experience across multiple sectors, combined with AI-modelled industry data. They are designed to provide directional guidance rather than precise comparisons.
                     </p>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>📊 200+ Finance functions analysed</div>
-                      <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>🏢 Segmented by industry & org scale</div>
-                      <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>🔄 Updated annually</div>
+                      <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>🏢 Drawn from Arpero's consulting experience</div>
+                      <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>🤖 Enhanced with AI-modelled industry patterns</div>
+                      <div style={{ padding: '8px 14px', background: '#e8f4fd', borderRadius: '6px', fontSize: '12px', color: '#0F4C81' }}>📊 Indicative — for directional guidance only</div>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
                       {isUnlocked ? (
