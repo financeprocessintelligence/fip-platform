@@ -316,8 +316,8 @@ export default function ResultsR2RPage() {
 
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a2e', marginBottom: '4px' }}>Industry Benchmarking — Your Industry Peers</h3>
-              <p style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>How your maturity compares to your industry peers at a similar organisational scale</p>
-              <p style={{ fontSize: '11px', color: '#999', marginBottom: '12px', fontStyle: 'italic' }}>ⓘ Benchmark figures are AI-estimated based on aggregated industry patterns and are indicative only.</p>
+              <p style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>See how your Finance function compares to the market</p>
+              <p style={{ fontSize: '11px', color: '#999', marginBottom: '12px', fontStyle: 'italic' }}>ⓘ These indicative benchmarks are drawn from Arpero's Finance transformation experience and AI-modelled industry data.</p>
               <div style={{ marginBottom: '20px' }}>
                 <button onClick={() => setShowBenchmarkInfo(prev => !prev)} style={{ fontSize: '12px', color: '#0F4C81', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', padding: 0 }}>{showBenchmarkInfo ? '▲ Hide' : '▼ About this benchmark'}</button>
                 {showBenchmarkInfo && (<div style={{ marginTop: '12px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
