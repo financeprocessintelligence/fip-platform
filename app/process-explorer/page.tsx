@@ -111,14 +111,15 @@ useEffect(() => {
   checkMobile()
   window.addEventListener('resize', checkMobile)
   return () => window.removeEventListener('resize', checkMobile)
-},export default function ProcessExplorerPage() {
+}, [])
+
+export default function ProcessExplorerPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <ProcessExplorerPageInner />
     </Suspense>
   )
-} [])
-
+}
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
