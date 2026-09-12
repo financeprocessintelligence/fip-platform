@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
 const taxonomy: Record<string, { columns: { groupName: string; code: string; name: string; activities: string[] }[] }> = {
@@ -98,9 +98,10 @@ const groupColors: Record<string, string> = {
   'Control & Comply': '#6b21a8',
 }
 
-export default function ProcessExplorer() {
+function ProcessExplorerPageInner() {
   const router = useRouter()
-  const [selected, setSelected] = useState('Plan to Perform')
+  const searchParams = useSearchParams()
+const [selected, setSelected] = useState(searchParams.get('process') || 'Plan to Perform')
   const [industry, setIndustry] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 const [isMobile, setIsMobile] = useState(false)
@@ -110,7 +111,13 @@ useEffect(() => {
   checkMobile()
   window.addEventListener('resize', checkMobile)
   return () => window.removeEventListener('resize', checkMobile)
-}, [])
+},export default function ProcessExplorerPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProcessExplorerPageInner />
+    </Suspense>
+  )
+} [])
 
   useEffect(() => {
     const getUser = async () => {
